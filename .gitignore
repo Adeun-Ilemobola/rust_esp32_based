@@ -1,4 +1,15 @@
-/.vscode
-/.embuild
-/target
-/Cargo.lock
+# Editor / IDE files
+/.vscode/
+/.idea/
+
+# macOS
+.DS_Store
+
+# Rust build output
+/target/
+
+# ESP-IDF / embuild generated files
+/.embuild/
+
+# Optional Rust analyzer generated info
+/rust-project.json
