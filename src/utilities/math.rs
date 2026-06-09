@@ -1,5 +1,3 @@
-
-
 pub fn map_range(
     value: f32,
     input_min: f32,
