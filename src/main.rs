@@ -1,5 +1,5 @@
-mod Utilities;
-
+mod module;
+mod utilities;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -22,7 +22,7 @@ fn setup() {
 
     let raw_value = 512.0;
 
-    let mapped = Utilities::math::map_range(
+    let mapped = utilities::math::map_range(
         raw_value,
         0.0,
         1023.0,
@@ -30,7 +30,7 @@ fn setup() {
         100.0,
     );
 
-    let limited = Utilities::math::constrain_f32(
+    let limited = utilities::math::constrain_f32(
         mapped,
         0.0,
         100.0,
