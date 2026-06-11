@@ -1,7 +1,7 @@
 # Editor / IDE files
 /.vscode/
 /.idea/
-
+.DS_Store
 # macOS
 .DS_Store
 
