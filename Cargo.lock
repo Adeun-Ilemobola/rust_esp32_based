@@ -1215,6 +1215,7 @@ dependencies = [
 name = "rust_esp32_based"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "embassy-time",
  "embuild",
  "esp-idf-svc",

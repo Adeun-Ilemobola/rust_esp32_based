@@ -1,46 +1,27 @@
 pub mod core;
 pub mod module;
 pub mod utilities;
-use std::thread::sleep;
-use std::time::Duration;
+use esp_idf_svc::hal::delay::FreeRtos;
+use esp_idf_svc::hal::gpio::*;
+use esp_idf_svc::hal::peripherals::Peripherals;
 
 
 
-fn main() {
+
+fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    log::info!("Starting ESP32 Rust app...");
-    setup();
+    log::info!("Starting simple GPIO15 blink test...");
+
+    let peripherals = Peripherals::take()?;
+    let mut led = PinDriver::output(peripherals.pins.gpio15)?;
 
     loop {
-        update();
-        sleep(Duration::from_millis(1000));
+        led.set_high()?;
+        FreeRtos::delay_ms(1000);
+
+        led.set_low()?;
+        FreeRtos::delay_ms(1000);
     }
-}
-fn setup() {
-    log::info!("Setup running...");
-
-    let raw_value = 512.0;
-
-    let mapped = utilities::math::map_range(
-        raw_value,
-        0.0,
-        1023.0,
-        0.0,
-        100.0,
-    );
-
-    let limited = utilities::math::constrain_f32(
-        mapped,
-        0.0,
-        100.0,
-    );
-
-    log::info!("Mapped value: {}", mapped);
-    log::info!("Limited value: {}", limited);
-}
-
-fn update() {
-    log::info!("Loop tick...");
 }
