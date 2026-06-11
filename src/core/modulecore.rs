@@ -1,12 +1,12 @@
 use uuid::Uuid;
  
 #[derive(Debug, Clone)]
-pub struct Modulecore {
+pub struct ModuleCore {
     id: String,
     module_type: String,
 }
 
-impl Modulecore {
+impl ModuleCore {
     pub fn new( module_type: &str) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),

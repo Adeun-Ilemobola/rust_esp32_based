@@ -1,10 +1,10 @@
-use crate::module::modulecore::Modulecore;
+use crate::core::modulecore::ModuleCore;
 use crate::utilities::logger::Level;
 use serde_json::{json, Value};
 
 
 pub struct Ledmodule {
-    core: Modulecore,
+    core: ModuleCore,
     state: bool,
     pin: u8,
 }
@@ -12,7 +12,7 @@ pub struct Ledmodule {
 impl Ledmodule {
     pub fn new(pin: u8) -> Ledmodule {
         Ledmodule {
-            core: Modulecore::new("LED"),
+            core: ModuleCore::new("LED"),
             state: false,
             pin,
         }

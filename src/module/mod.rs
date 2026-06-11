@@ -1,2 +1,1 @@
-pub mod ledmodule;
-pub mod modulecore;
+pub mod ledmodule; // example

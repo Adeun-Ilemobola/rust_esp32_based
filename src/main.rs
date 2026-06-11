@@ -1,5 +1,6 @@
-//mod module; // This is not needed as we are using the module in the main.rs file
-mod utilities;
+pub mod core;
+pub mod module;
+pub mod utilities;
 use std::thread::sleep;
 use std::time::Duration;
 
