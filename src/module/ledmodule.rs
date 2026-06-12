@@ -1,54 +1,58 @@
+use crate::core::hardware::{OutputPin, OutputPinCore};
 use crate::core::modulecore::ModuleCore;
 use crate::utilities::logger::Priority;
 use serde_json::{json, Value};
-use serde::{Serialize, Deserialize};
 
-
-
-#[derive(Debug, Clone ,Serialize, Deserialize)]
-pub struct Ledmodule {
+pub struct Ledmodule<'d> {
     core: ModuleCore,
     state: bool,
     pin: u8,
+    pin_driver: OutputPinCore<'d>,
 }
-
-impl Ledmodule {
-    pub fn new(pin: u8) -> Ledmodule {
-       let ledmodule = Ledmodule {
+impl<'d> Ledmodule<'d> {
+    pub fn new<T>(pin_number: u8, pin: T) -> anyhow::Result<Ledmodule<'d>>
+    where
+        T: OutputPin + 'd,
+    {
+        let ledmodule = Ledmodule {
             core: ModuleCore::new("LED"),
             state: false,
-            pin,
+            pin: pin_number,
+            pin_driver: OutputPinCore::new(pin_number, pin)?,
         };
+
         ledmodule.send_serde_json(Priority::Medium);
-        ledmodule
+
+        Ok(ledmodule)
     }
+
     pub fn get_id(&self) -> &str {
         self.core.get_id()
     }
 
+    pub fn set_state(&mut self, state: bool) -> anyhow::Result<()> {
+        self.pin_driver.set_state(state)?;
+        self.state = state;
 
-    fn self_to_json(&self , priority: Priority) -> Value {
+        Ok(())
+    }
+
+    pub fn self_to_json(&self, priority: Priority) -> Value {
         json!({
             "id": self.get_id(),
             "type": self.core.get_module_type(),
             "state": self.state,
             "pin": self.pin,
             "version": "1.0",
-            "priority": format!("{:?}", priority)
+            "priority": format!("{:?}", priority),
         })
     }
+
     pub fn send_serde_json(&self, priority: Priority) {
         let json_data = self.self_to_json(priority);
-        // Here you would send json_data to your desired destination
-        serde_json::to_string(&json_data).map(|s| println!("Sending JSON: {}", s)).unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
-        println!("Sending JSON: {}", json_data);
-    }
 
-    pub fn get_state(&self) -> bool {
-        self.state
-    }
-
-    pub fn set_state(&mut self, state: bool) {
-        self.state = state;
+        serde_json::to_string(&json_data)
+            .map(|s| println!("Sending JSON: {}", s))
+            .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
     }
 }

@@ -1,12 +1,8 @@
 pub mod core;
 pub mod module;
 pub mod utilities;
-use esp_idf_svc::hal::delay::FreeRtos;
-use esp_idf_svc::hal::gpio::*;
-use esp_idf_svc::hal::peripherals::Peripherals;
-
-
-
+use crate::core::hardware::*;
+use module::ledmodule::Ledmodule;
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -15,13 +11,15 @@ fn main() -> anyhow::Result<()> {
     log::info!("Starting simple GPIO15 blink test...");
 
     let peripherals = Peripherals::take()?;
-    let mut led = PinDriver::output(peripherals.pins.gpio15)?;
+
+    let mut led_module = Ledmodule::new(15, peripherals.pins.gpio15)?;
 
     loop {
-        led.set_high()?;
+      
         FreeRtos::delay_ms(1000);
+        led_module.set_state(true);
 
-        led.set_low()?;
+        led_module.set_state(false);
         FreeRtos::delay_ms(1000);
     }
 }

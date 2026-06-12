@@ -1,7 +1,7 @@
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone ,Serialize, Deserialize)]
+#[derive(Debug, Clone )]
 pub struct ModuleCore {
     id: String,
     module_type: String,
