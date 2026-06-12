@@ -1,0 +1,10 @@
+{
+  "project_name": "rust_esp32_basedv0",
+  "project_path": "/Users/adeun/rust_esp32_basedv0",
+  "id": "8346f619-9db5-45fc-a727-e3f92f732505",
+  "build_command": "source ~/export-esp.sh && cargo build",
+  "flash_command": "cargo flash --monitor --port /dev/ttyUSB0",
+  "install_components": [
+    "ledmodule.rs"
+  ]
+}
