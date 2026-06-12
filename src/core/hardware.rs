@@ -1,6 +1,7 @@
 pub use esp_idf_svc::hal::delay::FreeRtos;
 pub use esp_idf_svc::hal::gpio::*;
 pub use esp_idf_svc::hal::peripherals::Peripherals;
+use esp_idf_svc::hal::sleep;
 
 pub struct OutputPinCore<'d> {
     pin_number: u8,
@@ -38,4 +39,8 @@ impl<'d> OutputPinCore<'d> {
         self.driver.toggle()?;
         Ok(())
     }
+}
+
+pub fn sleep_time(ms:u32){
+    FreeRtos::delay_ms(ms);
 }

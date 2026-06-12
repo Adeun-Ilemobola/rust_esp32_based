@@ -15,11 +15,9 @@ fn main() -> anyhow::Result<()> {
     let mut led_module = Ledmodule::new(15, peripherals.pins.gpio15)?;
 
     loop {
-      
-        FreeRtos::delay_ms(1000);
-        led_module.set_state(true);
-
-        led_module.set_state(false);
-        FreeRtos::delay_ms(1000);
+        sleep_time(750);
+        led_module.set_state(true)?;
+        sleep_time(687);
+        led_module.set_state(false)?;
     }
 }
