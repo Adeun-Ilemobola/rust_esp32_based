@@ -1,8 +1,6 @@
 
-
-
-#[derive(Debug)]
-pub enum Level {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Priority {
     Low,
     Medium,
     High,

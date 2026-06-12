@@ -1220,6 +1220,7 @@ dependencies = [
  "embuild",
  "esp-idf-svc",
  "log",
+ "serde",
  "serde_json",
  "uuid",
 ]

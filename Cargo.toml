@@ -26,12 +26,10 @@ log = "0.4"
 esp-idf-svc = { version = "0.52.1", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
 # Remove `generic-queue-8` if you plan to use `embassy-time` WITH `embassy-executor`
 embassy-time = { version = "0.5", features = ["generic-queue-8"] }
+uuid = { version = "1.23.2", features = ["v4"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 anyhow = "1.0.102"
-[dependencies.uuid]
-version = "1.23.2"
-# Lets you generate random UUIDs
-features = ["v4"]
 
 
 [build-dependencies]
