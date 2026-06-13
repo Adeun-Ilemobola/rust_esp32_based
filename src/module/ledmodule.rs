@@ -1,6 +1,6 @@
 use crate::core::hardware::{OutputPin, OutputPinCore};
 use crate::core::modulecore::ModuleCore;
-use crate::utilities::logger::Priority;
+use crate::utilities::logger::{EventModeType, Priority};
 use serde_json::{json, Value};
 
 pub struct Ledmodule<'d> {
@@ -21,7 +21,7 @@ impl<'d> Ledmodule<'d> {
             pin_driver: OutputPinCore::new(pin_number, pin)?,
         };
 
-        ledmodule.send_serde_json(Priority::Medium);
+        ledmodule.send_serde_json(Priority::Medium  , EventModeType::Register);
 
         Ok(ledmodule)
     }
@@ -33,11 +33,12 @@ impl<'d> Ledmodule<'d> {
     pub fn set_state(&mut self, state: bool) -> anyhow::Result<()> {
         self.pin_driver.set_state(state)?;
         self.state = state;
+        self.send_serde_json(Priority::Medium, EventModeType::State);
 
         Ok(())
     }
 
-    pub fn self_to_json(&self, priority: Priority) -> Value {
+    pub fn self_to_json(&self, priority: Priority , event_mode: EventModeType) -> Value {
         json!({
             "id": self.get_id(),
             "type": self.core.get_module_type(),
@@ -45,14 +46,15 @@ impl<'d> Ledmodule<'d> {
             "pin": self.pin,
             "version": "1.0",
             "priority": format!("{:?}", priority),
+            "event_mode": format!("{:?}", event_mode),
         })
     }
 
-    pub fn send_serde_json(&self, priority: Priority) {
-        let json_data = self.self_to_json(priority);
+    pub fn send_serde_json(&self, priority: Priority, event_mode: EventModeType) {
+        let json_data = self.self_to_json(priority, event_mode);
 
         serde_json::to_string(&json_data)
-            .map(|s| println!("Sending JSON: {}", s))
+            .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
     }
 }

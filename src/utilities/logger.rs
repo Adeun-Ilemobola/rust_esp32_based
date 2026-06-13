@@ -6,3 +6,10 @@ pub enum Priority {
     High,
     Critical, 
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum EventModeType{
+    State,
+    Register
+
+}    

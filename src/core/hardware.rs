@@ -1,11 +1,42 @@
 pub use esp_idf_svc::hal::delay::FreeRtos;
 pub use esp_idf_svc::hal::gpio::*;
 pub use esp_idf_svc::hal::peripherals::Peripherals;
-use esp_idf_svc::hal::sleep;
 
 pub struct OutputPinCore<'d> {
     pin_number: u8,
     driver: PinDriver<'d, Output>,
+}
+pub struct InputPinCore<'d> {
+    pin_number: u8,
+    driver: PinDriver<'d, Input>,
+    mode: Pull,
+}
+
+
+impl<'d> InputPinCore<'d> {
+    pub fn new<T >(pin_number: u8, pin: T , pull_mode: Pull,) -> anyhow::Result<Self>
+    where
+        T: InputPin + 'd,
+    {
+        let driver = PinDriver::input(pin , pull_mode)?;
+
+        Ok(Self {
+            pin_number,
+            driver,
+            mode: pull_mode,
+        })
+    }
+    pub fn pin_number(&self) -> u8 {
+        self.pin_number
+    }
+
+    pub  fn high(&self)-> anyhow::Result<bool> {
+        Ok(self.driver.is_high())
+    }
+    pub  fn low(&self)-> anyhow::Result<bool> {
+        Ok(self.driver.is_low())
+    }
+
 }
 
 impl<'d> OutputPinCore<'d> {
