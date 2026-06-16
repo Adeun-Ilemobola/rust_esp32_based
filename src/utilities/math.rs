@@ -1,10 +1,10 @@
 pub fn map_range(
-    value: f32,
-    input_min: f32,
-    input_max: f32,
-    output_min: f32,
-    output_max: f32,
-) -> f32 {
+    value: u32,
+    input_min: u32,
+    input_max: u32,
+    output_min: u32,
+    output_max: u32,
+) -> u32 {
     if input_max == input_min {
         return output_min;
     }

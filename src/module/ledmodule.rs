@@ -1,27 +1,42 @@
-use crate::core::hardware::{OutputPin, OutputPinCore};
+use crate::core::hardware::{ledc
+    , OutputPin, 
+    OutputPinCore
+};
 use crate::core::modulecore::ModuleCore;
 use crate::utilities::logger::{EventModeType, Priority};
+use crate::utilities::math::map_range;
+
 use serde_json::{json, Value};
 
 pub struct Ledmodule<'d> {
     core: ModuleCore,
-    state: bool,
+    state: u32,
     pin: u8,
-    pin_driver: OutputPinCore<'d>,
+    // pin_driver: OutputPinCore<'d>,
+    pwm: ledc::LedcDriver<'d>,
 }
 impl<'d> Ledmodule<'d> {
-    pub fn new<T>(pin_number: u8, pin: T) -> anyhow::Result<Ledmodule<'d>>
+    pub fn new<T , C>(
+        pin: T,
+        channel: C,
+        timer: &ledc::LedcTimerDriver<'d, ledc::LowSpeed>,
+    ) -> anyhow::Result<Ledmodule<'d>>
     where
         T: OutputPin + 'd,
+        C: ledc::LedcChannel<SpeedMode = ledc::LowSpeed> + 'd,
     {
+        let pin_number = pin.pin() as u8;
+
+        let pwm = ledc::LedcDriver::new(channel, timer, pin)?;
+
         let ledmodule = Ledmodule {
             core: ModuleCore::new("LED"),
-            state: false,
+            state: 0,
             pin: pin_number,
-            pin_driver: OutputPinCore::new(pin_number, pin)?,
+            pwm,
         };
 
-        ledmodule.send_serde_json(Priority::Medium  , EventModeType::Register);
+        ledmodule.send_serde_json(Priority::Medium, EventModeType::Register);
 
         Ok(ledmodule)
     }
@@ -30,23 +45,26 @@ impl<'d> Ledmodule<'d> {
         self.core.get_id()
     }
 
-    pub fn set_state(&mut self, state: bool) -> anyhow::Result<()> {
-        self.pin_driver.set_state(state)?;
+    pub fn set_state(&mut self, state: u32) -> anyhow::Result<()> {
+        let p = map_range(state, 0, 100, 0, self.pwm.get_max_duty());
+        self.pwm.set_duty(p)?;
         self.state = state;
         self.send_serde_json(Priority::Medium, EventModeType::State);
 
         Ok(())
     }
 
-    pub fn self_to_json(&self, priority: Priority , event_mode: EventModeType) -> Value {
+    pub fn self_to_json(&self, _priority: Priority, event_mode: EventModeType) -> Value {
+        let kind = match event_mode {
+            EventModeType::Register => "registered",
+            EventModeType::State => "event",
+        };
         json!({
             "id": self.get_id(),
-            "type": self.core.get_module_type(),
-            "state": self.state,
-            "pin": self.pin,
             "version": "1.0",
-            "priority": format!("{:?}", priority),
-            "event_mode": format!("{:?}", event_mode),
+            "kind": kind,
+            "moduletype": "led",
+            "payload": { "state": self.state },
         })
     }
 

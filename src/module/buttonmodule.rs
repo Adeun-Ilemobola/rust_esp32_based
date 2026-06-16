@@ -15,15 +15,15 @@ pub struct Buttonmodule<'d> {
 }
 
 impl<'d> Buttonmodule<'d> {
-    pub fn new<T>(pin_number: u8, pin: T) -> anyhow::Result<Buttonmodule<'d>>
+    pub fn new<T>( pin: T) -> anyhow::Result<Buttonmodule<'d>>
     where
         T: InputPin + 'd,
     {
         let buttonmodule = Buttonmodule {
             core: ModuleCore::new("Button"),
             state: false,
-            pin: pin_number,
-            pin_driver: InputPinCore::new(pin_number, pin, Pull::Up)?,
+            pin: pin.pin() as u8,
+            pin_driver: InputPinCore::new(pin, Pull::Up)?,
             last_state: false,
             last_change_time: std::time::Instant::now(),
         };
@@ -34,7 +34,7 @@ impl<'d> Buttonmodule<'d> {
     }
 
     pub fn update_state(&mut self) -> anyhow::Result<()> {
-        let current_state = self.pin_driver.high()?;
+        let current_state = self.pin_driver.low()?;
 
         if current_state != self.last_state {
             let now = std::time::Instant::now();
@@ -53,22 +53,24 @@ impl<'d> Buttonmodule<'d> {
     pub fn is_pressed(&mut self) -> anyhow::Result<bool> {
         self.update_state()?;
 
-        Ok(self.state && self.pin_driver.high()?)
+        Ok(self.state && self.pin_driver.low()?)
     }
 
     pub fn get_id(&self) -> &str {
         self.core.get_id()
     }
 
-    pub fn self_to_json(&self, priority: Priority, event_mode: EventModeType) -> Value {
+    pub fn self_to_json(&self, _priority: Priority, event_mode: EventModeType) -> Value {
+        let kind = match event_mode {
+            EventModeType::Register => "registered",
+            EventModeType::State => "event",
+        };
         json!({
             "id": self.core.get_id(),
-            "type": self.core.get_module_type(),
-            "state": self.state,
-            "pin": self.pin,
             "version": "1.0",
-            "priority": format!("{:?}", priority),
-            "event_mode": format!("{:?}", event_mode),
+            "kind": kind,
+            "moduletype": "button",
+            "payload": { "pressed": self.state },
         })
     }
 

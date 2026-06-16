@@ -1,6 +1,9 @@
 pub use esp_idf_svc::hal::delay::FreeRtos;
 pub use esp_idf_svc::hal::gpio::*;
 pub use esp_idf_svc::hal::peripherals::Peripherals;
+pub use esp_idf_svc::hal::ledc;
+pub use esp_idf_svc::partition::*;
+pub use esp_idf_svc::hal::units::*;
 
 pub struct OutputPinCore<'d> {
     pin_number: u8,
@@ -14,12 +17,13 @@ pub struct InputPinCore<'d> {
 
 
 impl<'d> InputPinCore<'d> {
-    pub fn new<T >(pin_number: u8, pin: T , pull_mode: Pull,) -> anyhow::Result<Self>
+    pub fn new<T >(pin: T , pull_mode: Pull,) -> anyhow::Result<Self>
     where
         T: InputPin + 'd,
     {
+        let pin_number = pin.pin() as u8; 
         let driver = PinDriver::input(pin , pull_mode)?;
-
+       
         Ok(Self {
             pin_number,
             driver,
@@ -40,16 +44,13 @@ impl<'d> InputPinCore<'d> {
 }
 
 impl<'d> OutputPinCore<'d> {
-    pub fn new<T>(pin_number: u8, pin: T) -> anyhow::Result<Self>
+    pub fn new<T>(pin: T) -> anyhow::Result<Self>
     where
         T: OutputPin + 'd,
     {
-        let driver = PinDriver::output(pin)?;
-
-        Ok(Self {
-            pin_number,
-            driver,
-        })
+        let pin_number = pin.pin() as u8; 
+        let driver = PinDriver::output(pin)?; 
+        Ok(Self { pin_number, driver })
     }
 
     pub fn pin_number(&self) -> u8 {

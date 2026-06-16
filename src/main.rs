@@ -2,6 +2,13 @@ pub mod core;
 pub mod module;
 pub mod utilities;
 use crate::core::hardware::*;
+use crate::core::hardware::{
+    ledc::{
+        config::TimerConfig,
+        LedcTimerDriver,
+        Resolution
+    }
+};
 use module::ledmodule::Ledmodule;
 
 fn main() -> anyhow::Result<()> {
@@ -12,12 +19,21 @@ fn main() -> anyhow::Result<()> {
 
     let peripherals = Peripherals::take()?;
 
-    let mut led_module = Ledmodule::new(15, peripherals.pins.gpio15)?;
+     let timer_config = TimerConfig::new()
+        .frequency(5_u32.kHz().into())
+        .resolution(Resolution::Bits13);
+    let timer = LedcTimerDriver::new(peripherals.ledc.timer0, &timer_config)?;
+
+    let mut led_module = Ledmodule::new(peripherals.pins.gpio15 ,peripherals.ledc.channel0 ,&timer)?;
 
     loop {
-        sleep_time(750);
-        led_module.set_state(true)?;
-        sleep_time(687);
-        led_module.set_state(false)?;
+       for duty in (0..=100).step_by(1) {
+            led_module.set_state(duty)?;
+            sleep_time(25);
+        }
+        for duty in (0..=100).rev().step_by(1) {
+             led_module.set_state(duty)?;
+           sleep_time(25);
+        }
     }
 }
