@@ -53,6 +53,15 @@ impl<'d> Ledmodule<'d> {
 
         Ok(())
     }
+    pub fn toggle(&mut self)-> anyhow::Result<()>{
+        if self.state == 0 {
+            self.set_state(100)?;
+        }else {
+             self.set_state(0)?;
+        }
+
+        Ok(())
+    }
 
     pub fn self_to_json(&self, _priority: Priority, event_mode: EventModeType) -> Value {
         let kind = match event_mode {
