@@ -3,43 +3,21 @@ pub mod module;
 pub mod utilities;
 use crate::core::hardware::ledc::{config::TimerConfig, LedcTimerDriver, Resolution};
 use crate::core::hardware::*;
+use crate::core::modulecore::Module;
+use crate::utilities::sharetype::IncomingCommand;
 use module::ledmodule::Ledmodule;
-use serde::Deserialize;
+use std::collections::HashMap;
 use std::io;
-use std::io::{ BufRead, ErrorKind};
+use std::io::{BufRead, ErrorKind};
 use std::sync::mpsc;
 
-#[derive(serde::Deserialize)]
-enum EspCommand {
-    SetLed { id: u8, value: u32 },
-    Ping,
-}
 
-#[derive(Debug, Deserialize)]
-pub struct IncomingCommand {
-    pub kind: String,
-    pub id: String,
 
-    #[serde(flatten)]
-    pub command: ModuleCommand,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "moduletype", content = "payload", rename_all = "snake_case")]
-pub enum ModuleCommand {
-    Led(LedCommandPayload),
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "command", rename_all = "snake_case")]
-pub enum LedCommandPayload {
-    SetState { state: u32 },
-    Toggle,
-}
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
+    let mut modules: HashMap<String, Box<dyn Module>> = HashMap::new();
 
     log::info!("Starting simple GPIO15 blink test...");
 
@@ -52,6 +30,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut led_module =
         Ledmodule::new(peripherals.pins.gpio15, peripherals.ledc.channel0, &timer)?;
+    modules.insert(led_module.id().to_string(), Box::new(led_module));
 
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
 
@@ -60,34 +39,11 @@ fn main() -> anyhow::Result<()> {
     });
 
     loop {
-       
-        // for duty in (0..=100).step_by(1) {
-        //     led_module.set_state(duty)?;
-        //     sleep_time(25);
-        // }
-        // for duty in (0..=100).rev().step_by(1) {
-        //     led_module.set_state(duty)?;
-        //     sleep_time(25);
-        // }
-
-         if let Ok(command) = command_receiver.try_recv() {
-            match command.command {
-                ModuleCommand::Led(led_command) => {
-                    match led_command {
-                        LedCommandPayload::SetState { state } => {
-                            led_module.set_state(state)?;
-                        }
-
-                        LedCommandPayload::Toggle => {
-                            led_module.toggle()?;
-                        }
-                    }
-
-                    
-                }
+        if let Ok(command) = command_receiver.try_recv() {
+            if let Some(m) = modules.get_mut(&command.id) {
+                 m.handle_command(&command.command)?;
             }
         }
-        sleep_time(15);
     }
 }
 

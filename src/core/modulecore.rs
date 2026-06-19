@@ -1,10 +1,12 @@
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
+use crate::utilities::sharetype::{
+    ModuleCommand
+};
 
 #[derive(Debug, Clone )]
 pub struct ModuleCore {
-    id: String,
-    module_type: String,
+    pub  id: String,
+    pub module_type: String,
 }
 
 impl ModuleCore {
@@ -22,4 +24,12 @@ impl ModuleCore {
     pub fn get_module_type(&self) -> &str {
         &self.module_type
     }
+}
+
+pub trait Module {
+    fn core(&self) -> &ModuleCore;
+    fn id (&self)->&String;
+    fn get_module_type(&self)->&String;
+    fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()>;
+    
 }

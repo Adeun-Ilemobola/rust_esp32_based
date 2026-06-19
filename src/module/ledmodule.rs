@@ -1,11 +1,15 @@
-use crate::core::hardware::{ledc
-    , OutputPin, 
-    OutputPinCore
+use crate::core::hardware::{
+    ledc,
+    OutputPin,
+    // OutputPinCore
 };
-use crate::core::modulecore::ModuleCore;
+use crate::core::modulecore::{Module, ModuleCore};
 use crate::utilities::logger::{EventModeType, Priority};
 use crate::utilities::math::map_range;
-
+use crate::utilities::sharetype::{
+    LedCommandPayload, ModuleCommand
+};
+use anyhow::Ok;
 use serde_json::{json, Value};
 
 pub struct Ledmodule<'d> {
@@ -16,7 +20,7 @@ pub struct Ledmodule<'d> {
     pwm: ledc::LedcDriver<'d>,
 }
 impl<'d> Ledmodule<'d> {
-    pub fn new<T , C>(
+    pub fn new<T, C>(
         pin: T,
         channel: C,
         timer: &ledc::LedcTimerDriver<'d, ledc::LowSpeed>,
@@ -41,10 +45,6 @@ impl<'d> Ledmodule<'d> {
         Ok(ledmodule)
     }
 
-    pub fn get_id(&self) -> &str {
-        self.core.get_id()
-    }
-
     pub fn set_state(&mut self, state: u32) -> anyhow::Result<()> {
         let p = map_range(state, 0, 100, 0, self.pwm.get_max_duty());
         self.pwm.set_duty(p)?;
@@ -53,11 +53,11 @@ impl<'d> Ledmodule<'d> {
 
         Ok(())
     }
-    pub fn toggle(&mut self)-> anyhow::Result<()>{
+    pub fn toggle(&mut self) -> anyhow::Result<()> {
         if self.state == 0 {
             self.set_state(100)?;
-        }else {
-             self.set_state(0)?;
+        } else {
+            self.set_state(0)?;
         }
 
         Ok(())
@@ -69,7 +69,7 @@ impl<'d> Ledmodule<'d> {
             EventModeType::State => "event",
         };
         json!({
-            "id": self.get_id(),
+            "id": self.id(),
             "version": "1.0",
             "kind": kind,
             "moduletype": "led",
@@ -83,5 +83,31 @@ impl<'d> Ledmodule<'d> {
         serde_json::to_string(&json_data)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
+    }
+    
+}
+
+impl<'d> Module for Ledmodule<'d> {
+    fn id(&self) -> &String {
+        &self.core.id
+    }
+
+    fn core(&self) -> &ModuleCore {
+        &self.core
+    }
+    fn get_module_type(&self) -> &String {
+        &self.core.module_type
+    }
+    fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()>{
+        match command {
+            ModuleCommand::Led(led_command) => match led_command {
+                LedCommandPayload::SetState { state } => self.set_state(*state)?,
+                LedCommandPayload::Toggle => self.toggle()?,
+            },
+           
+        }
+
+
+        Ok(())
     }
 }
