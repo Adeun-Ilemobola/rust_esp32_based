@@ -5,6 +5,7 @@ pub use esp_idf_svc::hal::ledc;
 pub use esp_idf_svc::partition::*;
 pub use esp_idf_svc::hal::units::*;
 pub use esp_idf_svc::hal::uart::UartDriver;  
+use std::time::Duration;
 
 pub struct OutputPinCore<'d> {
     pin_number: u8,
@@ -79,4 +80,7 @@ impl<'d> OutputPinCore<'d> {
 
 pub fn sleep_time(ms:u32){
     FreeRtos::delay_ms(ms);
+}
+pub fn sleep_ms(ms:u64){
+    std::thread::sleep(Duration::from_millis(ms));
 }

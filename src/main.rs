@@ -19,7 +19,7 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
     let mut modules: HashMap<String, ModuleHandle<'_>> = HashMap::new();
 
-    log::info!("Starting simple GPIO15 blink test...");
+    
 
     let peripherals = Peripherals::take()?;
 
@@ -33,13 +33,15 @@ fn main() -> anyhow::Result<()> {
         peripherals.ledc.channel0,
         &timer,
     )?));
+    modules.insert(led_module.borrow().id().to_string(), led_module.clone());
+
 
   
-    let  but = Rc::new(RefCell::new(Buttonmodule::new(peripherals.pins.gpio0)?));
+    // let  but = Rc::new(RefCell::new(Buttonmodule::new(peripherals.pins.gpio0)?));
+    let mut  btu = Buttonmodule::new(peripherals.pins.gpio12)?;
 
 
-      modules.insert(led_module.borrow().id().to_string(), led_module.clone());
-      modules.insert(but.borrow().id().to_string(), but.clone());
+    //   modules.insert(but.borrow().id().to_string(), but.clone());
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
 
     std::thread::spawn(move || {
@@ -47,7 +49,7 @@ fn main() -> anyhow::Result<()> {
     });
 
     loop {
-        if but.borrow_mut().is_pressed()? {
+        if btu.poll()? {
             led_module.borrow_mut().toggle()?
         }
 
@@ -56,6 +58,7 @@ fn main() -> anyhow::Result<()> {
                 m.borrow_mut().handle_command(&command.command)?;
             }
         }
+         sleep_ms(10);
     }
 }
 
