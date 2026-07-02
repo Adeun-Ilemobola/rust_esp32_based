@@ -41,6 +41,9 @@ impl<'d> InputPinCore<'d> {
     pub  fn low(&self)-> anyhow::Result<bool> {
         Ok(self.driver.is_low())
     }
+    pub  fn now(&self)-> anyhow::Result<Level> {
+        Ok(self.driver.get_level())
+    }
 
 }
 

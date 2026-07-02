@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 
 pub struct Ledmodule<'d> {
     core: ModuleCore,
-    state: u32,
+     state: u32,
     pin: u8,
     // pin_driver: OutputPinCore<'d>,
     pwm: ledc::LedcDriver<'d>,
@@ -40,7 +40,7 @@ impl<'d> Ledmodule<'d> {
             pwm,
         };
 
-        ledmodule.send_serde_json(Priority::Medium, EventModeType::Register);
+        let _ = ledmodule.serialize(Priority::Medium, EventModeType::Register);
 
         Ok(ledmodule)
     }
@@ -49,10 +49,16 @@ impl<'d> Ledmodule<'d> {
         let p = map_range(state, 0, 100, 0, self.pwm.get_max_duty());
         self.pwm.set_duty(p)?;
         self.state = state;
-        self.send_serde_json(Priority::Medium, EventModeType::State);
+        let  _ = self.serialize(Priority::Medium, EventModeType::State);
 
         Ok(())
     }
+    pub fn  get_state(&self)-> anyhow::Result<&u32>{
+        Ok(&self.state)
+
+
+     }
+   
     pub fn toggle(&mut self) -> anyhow::Result<()> {
         if self.state == 0 {
             self.set_state(100)?;
@@ -62,29 +68,6 @@ impl<'d> Ledmodule<'d> {
 
         Ok(())
     }
-
-    pub fn self_to_json(&self, _priority: Priority, event_mode: EventModeType) -> Value {
-        let kind = match event_mode {
-            EventModeType::Register => "registered",
-            EventModeType::State => "event",
-        };
-        json!({
-            "id": self.id(),
-            "version": "1.0",
-            "kind": kind,
-            "moduletype": "led",
-            "payload": { "state": self.state },
-        })
-    }
-
-    pub fn send_serde_json(&self, priority: Priority, event_mode: EventModeType) {
-        let json_data = self.self_to_json(priority, event_mode);
-
-        serde_json::to_string(&json_data)
-            .map(|s| println!("{}", s))
-            .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
-    }
-    
 }
 
 impl<'d> Module for Ledmodule<'d> {
@@ -101,13 +84,33 @@ impl<'d> Module for Ledmodule<'d> {
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()>{
         match command {
             ModuleCommand::Led(led_command) => match led_command {
-                LedCommandPayload::SetState { state } => self.set_state(*state)?,
+                LedCommandPayload::SetState { state } => self.set_state(state.clone())?,
                 LedCommandPayload::Toggle => self.toggle()?,
             },
            
         }
+        Ok(())
+    }
 
+    fn serialize(&self, _priority: Priority, event_mode: EventModeType) -> anyhow::Result<()> {
+
+        let kind = match event_mode {
+            EventModeType::Register => "registered",
+            EventModeType::State => "event",
+        };
+       let data = json!({
+            "id": self.id(),
+            "version": "1.0",
+            "kind": kind,
+            "moduletype": "led",
+            "payload": { "state": self.state },
+        });
+
+         serde_json::to_string(&data)
+            .map(|s| println!("{}", s))
+            .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 
         Ok(())
+        
     }
 }

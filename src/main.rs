@@ -4,20 +4,20 @@ pub mod utilities;
 use crate::core::hardware::ledc::{config::TimerConfig, LedcTimerDriver, Resolution};
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
+use crate::module::buttonmodule::Buttonmodule;
 use crate::utilities::sharetype::IncomingCommand;
 use module::ledmodule::Ledmodule;
-use std::collections::HashMap;
 use std::io;
 use std::io::{BufRead, ErrorKind};
 use std::sync::mpsc;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-
-
+type ModuleHandle<'a> = Rc<RefCell<dyn Module + 'a>>;
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
-    let mut modules: HashMap<String, Box<dyn Module>> = HashMap::new();
+    let mut modules: HashMap<String, ModuleHandle<'_>> = HashMap::new();
 
     log::info!("Starting simple GPIO15 blink test...");
 
@@ -28,10 +28,18 @@ fn main() -> anyhow::Result<()> {
         .resolution(Resolution::Bits13);
     let timer = LedcTimerDriver::new(peripherals.ledc.timer0, &timer_config)?;
 
-    let mut led_module =
-        Ledmodule::new(peripherals.pins.gpio15, peripherals.ledc.channel0, &timer)?;
-    modules.insert(led_module.id().to_string(), Box::new(led_module));
+    let led_module = Rc::new(RefCell::new(Ledmodule::new(
+        peripherals.pins.gpio15,
+        peripherals.ledc.channel0,
+        &timer,
+    )?));
 
+  
+    let  but = Rc::new(RefCell::new(Buttonmodule::new(peripherals.pins.gpio0)?));
+
+
+      modules.insert(led_module.borrow().id().to_string(), led_module.clone());
+      modules.insert(but.borrow().id().to_string(), but.clone());
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
 
     std::thread::spawn(move || {
@@ -39,9 +47,13 @@ fn main() -> anyhow::Result<()> {
     });
 
     loop {
+        if but.borrow_mut().is_pressed()? {
+            led_module.borrow_mut().toggle()?
+        }
+
         if let Ok(command) = command_receiver.try_recv() {
             if let Some(m) = modules.get_mut(&command.id) {
-                 m.handle_command(&command.command)?;
+                m.borrow_mut().handle_command(&command.command)?;
             }
         }
     }

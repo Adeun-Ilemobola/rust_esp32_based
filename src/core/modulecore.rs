@@ -1,7 +1,6 @@
+use serde_json::Value;
 use uuid::Uuid;
-use crate::utilities::sharetype::{
-    ModuleCommand
-};
+use crate::utilities::{logger::{EventModeType, Priority}, sharetype::ModuleCommand};
 
 #[derive(Debug, Clone )]
 pub struct ModuleCore {
@@ -31,5 +30,6 @@ pub trait Module {
     fn id (&self)->&String;
     fn get_module_type(&self)->&String;
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()>;
+    fn serialize(&self, _priority: Priority, event_mode: EventModeType) -> anyhow::Result<()>; 
     
 }
