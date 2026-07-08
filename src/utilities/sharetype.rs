@@ -11,6 +11,7 @@ pub enum EspCommand {
 #[derive(Debug, Serialize , Deserialize)]
 pub struct OutgoingEvent {
     pub id: String,
+    pub  manuel_id:String,
     pub version: String,
     pub kind: String,
     pub moduletype: String,
@@ -18,6 +19,7 @@ pub struct OutgoingEvent {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub generated_info: Option<Value>,
+    pub master_id:Option<String>
 }
 
 #[derive(Debug, Deserialize)]

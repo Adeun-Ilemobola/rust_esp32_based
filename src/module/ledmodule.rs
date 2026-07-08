@@ -1,6 +1,6 @@
 use crate::core::hardware::{ledc, OutputPin};
 use crate::core::modulecore::{Module, ModuleCore};
-use crate::utilities::logger::{EventModeType, Priority};
+use crate::utilities::logger::{EventModeType};
 use crate::utilities::math::map_range;
 use crate::utilities::sharetype::{LedCommandPayload, ModuleCommand, OutgoingEvent};
 use serde_json::json;
@@ -11,12 +11,14 @@ pub struct Ledmodule<'d> {
     pin: u8,
     pwm: ledc::LedcDriver<'d>,
     can_serialize: bool,
+   
 }
 impl<'d> Ledmodule<'d> {
     pub fn new<T, C>(
         pin: T,
         channel: C,
         timer: &ledc::LedcTimerDriver<'d, ledc::LowSpeed>,
+        cluster_id:Option<String>
     ) -> anyhow::Result<Ledmodule<'d>>
     where
         T: OutputPin + 'd,
@@ -26,15 +28,18 @@ impl<'d> Ledmodule<'d> {
 
         let pwm = ledc::LedcDriver::new(channel, timer, pin)?;
 
-        let ledmodule = Ledmodule {
-            core: ModuleCore::new("LED"),
+        let mut ledmodule = Ledmodule {
+            core: ModuleCore::new("LED", "led-3423"),
             state: 0,
             pin: pin_number,
             pwm,
             can_serialize: true,
         };
+        if cluster_id.is_some() {
+            ledmodule.can_serialize = false
+        }
 
-        let _ = ledmodule.serialize(Priority::Medium, EventModeType::Register);
+        let _ = ledmodule.serialize( EventModeType::Register , cluster_id.clone());
 
         Ok(ledmodule)
     }
@@ -44,7 +49,7 @@ impl<'d> Ledmodule<'d> {
         self.pwm.set_duty(p)?;
         self.state = state;
         if self.can_serialize {
-            let _ = self.serialize(Priority::Medium, EventModeType::State);
+            let _ = self.serialize( EventModeType::State , None);
         }
 
         Ok(())
@@ -65,7 +70,7 @@ impl<'d> Ledmodule<'d> {
     pub fn event_mode(&mut self, mode: bool) {
         self.can_serialize = mode;
     }
-    pub fn get_event(&self, event_mode: EventModeType) -> anyhow::Result<OutgoingEvent> {
+    pub fn get_event(&self, event_mode: EventModeType  , cluster_id:Option<String>) -> anyhow::Result<OutgoingEvent> {
         let kind = match event_mode {
             EventModeType::Register => "registered",
             EventModeType::State => "event",
@@ -74,12 +79,15 @@ impl<'d> Ledmodule<'d> {
         Ok(OutgoingEvent {
             id: self.id().to_string(),
             version: "1.0".to_string(),
+            manuel_id: self.core.manuel_id.to_string(),
+
             kind: kind.to_string(),
             moduletype: "led".to_string(),
             payload: json!({
                 "state": self.state
             }),
             generated_info: None,
+            master_id:cluster_id
         })
     }
 }
@@ -108,8 +116,8 @@ impl<'d> Module for Ledmodule<'d> {
         Ok(())
     }
 
-    fn serialize(&self, _priority: Priority, event_mode: EventModeType) -> anyhow::Result<()> {
-        serde_json::to_string(&self.get_event(event_mode)?)
+    fn serialize(&self ,event_mode: EventModeType ,  cluster_id:Option<String>) -> anyhow::Result<()> {
+        serde_json::to_string(&self.get_event(event_mode , cluster_id)?)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 

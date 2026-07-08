@@ -6,13 +6,16 @@ use crate::utilities::{logger::{EventModeType, Priority}, sharetype::ModuleComma
 pub struct ModuleCore {
     pub  id: String,
     pub module_type: String,
+    pub manuel_id:String
 }
 
 impl ModuleCore {
-    pub fn new( module_type: &str) -> Self {
+    pub fn new( module_type: &str , manuel_id:&str) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             module_type: module_type.to_string(),
+            manuel_id:manuel_id.to_string()
+
         }
     }
 
@@ -30,6 +33,6 @@ pub trait Module {
     fn id (&self)->&String;
     fn get_module_type(&self)->&String;
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()>;
-    fn serialize(&self, _priority: Priority, event_mode: EventModeType) -> anyhow::Result<()>; 
+    fn serialize(&self,  event_mode: EventModeType ,  cluster_id:Option<String>) -> anyhow::Result<()>; 
     
 }

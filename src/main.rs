@@ -32,6 +32,7 @@ fn main() -> anyhow::Result<()> {
         peripherals.pins.gpio15,
         peripherals.ledc.channel0,
         &timer,
+        None
     )?));
     modules.insert(led_module.borrow().id().to_string(), led_module.clone());
 
