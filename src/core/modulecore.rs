@@ -1,6 +1,6 @@
 use serde_json::Value;
 use uuid::Uuid;
-use crate::utilities::{logger::{EventModeType, Priority}, sharetype::ModuleCommand};
+use crate::utilities::{logger::{EventModeType, Priority}, serdeprotocol::ModuleCommand};
 
 #[derive(Debug, Clone )]
 pub struct ModuleCore {

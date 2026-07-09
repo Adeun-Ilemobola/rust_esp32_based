@@ -1,7 +1,7 @@
 use anyhow::Ok;
 use serde_json::{Value, json};
 
-use crate::{core::modulecore::{Module, ModuleCore}, utilities::{logger::EventModeType, sharetype::{ClusterCommandPayload, ModuleCommand, OutgoingEvent}}};
+use crate::{core::modulecore::{Module, ModuleCore}, utilities::{logger::EventModeType, serdeprotocol::{ClusterCommandPayload, ModuleCommand, OutgoingEvent}}};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 type ModuleHandle<'a> = Rc<RefCell<dyn Module + 'a>>;

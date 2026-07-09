@@ -1,11 +1,17 @@
 pub mod core;
 pub mod module;
 pub mod utilities;
+use pwm_pca9685::{Address, Channel, Pca9685};
 use crate::core::hardware::ledc::{config::TimerConfig, LedcTimerDriver, Resolution};
+use crate::core::hardware::i2c::{
+    I2cConfig,
+    I2cDriver
+
+};
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
 use crate::module::buttonmodule::Buttonmodule;
-use crate::utilities::sharetype::IncomingCommand;
+use crate::utilities::serdeprotocol::IncomingCommand;
 use module::ledmodule::Ledmodule;
 use std::io;
 use std::io::{BufRead, ErrorKind};
@@ -19,14 +25,21 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
     let mut modules: HashMap<String, ModuleHandle<'_>> = HashMap::new();
 
-    
-
     let peripherals = Peripherals::take()?;
+    let config = I2cConfig::new().baudrate(400.kHz().into());
 
     let timer_config = TimerConfig::new()
         .frequency(5_u32.kHz().into())
         .resolution(Resolution::Bits13);
     let timer = LedcTimerDriver::new(peripherals.ledc.timer0, &timer_config)?;
+
+    let mut i2c = I2cDriver::new(peripherals.i2c0,peripherals.pins.gpio2, // SDA
+        peripherals.pins.gpio3, // SCL
+        &config,
+    )?;
+
+
+
 
     let led_module = Rc::new(RefCell::new(Ledmodule::new(
         peripherals.pins.gpio15,

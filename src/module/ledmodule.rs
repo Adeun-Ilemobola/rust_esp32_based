@@ -1,8 +1,8 @@
 use crate::core::hardware::{ledc, OutputPin};
 use crate::core::modulecore::{Module, ModuleCore};
 use crate::utilities::logger::{EventModeType};
-use crate::utilities::math::map_range;
-use crate::utilities::sharetype::{LedCommandPayload, ModuleCommand, OutgoingEvent};
+use crate::utilities::math::range_u32;
+use crate::utilities::serdeprotocol::{LedCommandPayload, ModuleCommand, OutgoingEvent};
 use serde_json::json;
 
 pub struct Ledmodule<'d> {
@@ -45,7 +45,7 @@ impl<'d> Ledmodule<'d> {
     }
 
     pub fn set_state(&mut self, state: u32) -> anyhow::Result<()> {
-        let p = map_range(state, 0, 100, 0, self.pwm.get_max_duty());
+        let p = range_u32(state, 0, 100, 0, self.pwm.get_max_duty());
         self.pwm.set_duty(p)?;
         self.state = state;
         if self.can_serialize {

@@ -1,7 +1,7 @@
 use crate::core::hardware::{InputPin, InputPinCore, Pull};
 use crate::core::modulecore::{Module, ModuleCore};
-use crate::utilities::logger::{EventModeType, Priority};
-use crate::utilities::sharetype::OutgoingEvent;
+use crate::utilities::logger::{EventModeType};
+use crate::utilities::serdeprotocol::OutgoingEvent;
 use esp_idf_svc::hal::gpio::Level;
 use serde_json::json;
 
@@ -92,7 +92,7 @@ impl<'d> Module for Buttonmodule<'d> {
     }
     fn handle_command(
         &mut self,
-        _command: &crate::utilities::sharetype::ModuleCommand,
+        _command: &crate::utilities::serdeprotocol::ModuleCommand,
     ) -> anyhow::Result<()> {
         Ok(())
     }

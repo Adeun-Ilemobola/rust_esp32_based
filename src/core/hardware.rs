@@ -6,6 +6,7 @@ pub use esp_idf_svc::partition::*;
 pub use esp_idf_svc::hal::units::*;
 pub use esp_idf_svc::hal::uart::UartDriver;  
 use std::time::Duration;
+pub use esp_idf_svc::hal::i2c;
 
 pub struct OutputPinCore<'d> {
     pin_number: u8,
