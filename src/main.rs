@@ -1,18 +1,15 @@
 pub mod core;
 pub mod module;
 pub mod utilities;
-use pwm_pca9685::{Address, Channel, Pca9685};
+use crate::core::hardware::i2c::{I2cConfig, I2cDriver};
 use crate::core::hardware::ledc::{config::TimerConfig, LedcTimerDriver, Resolution};
-use crate::core::hardware::i2c::{
-    I2cConfig,
-    I2cDriver
-
-};
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
-use crate::module::buttonmodule::Buttonmodule;
+use crate::module::sorvomodule::SorvoModule;
+use crate::utilities::moduleconflg::SorvoConfig;
 use crate::utilities::serdeprotocol::IncomingCommand;
 use module::ledmodule::Ledmodule;
+use pwm_pca9685::{ Channel};
 use std::io;
 use std::io::{BufRead, ErrorKind};
 use std::sync::mpsc;
@@ -27,52 +24,50 @@ fn main() -> anyhow::Result<()> {
 
     let peripherals = Peripherals::take()?;
     let config = I2cConfig::new().baudrate(400.kHz().into());
+    // let timer_config = TimerConfig::new()
+    //     .frequency(5_u32.kHz().into())
+    //     .resolution(Resolution::Bits13);
+    // let timer: LedcTimerDriver<'_, ledc::LowSpeed> = LedcTimerDriver::new(peripherals.ledc.timer0, &timer_config)?;
 
-    let timer_config = TimerConfig::new()
-        .frequency(5_u32.kHz().into())
-        .resolution(Resolution::Bits13);
-    let timer = LedcTimerDriver::new(peripherals.ledc.timer0, &timer_config)?;
-
-    let mut i2c = I2cDriver::new(peripherals.i2c0,peripherals.pins.gpio2, // SDA
-        peripherals.pins.gpio3, // SCL
+    let i2c = I2cDriver::new(
+        peripherals.i2c0,
+        peripherals.pins.gpio21, // SDA  27
+        peripherals.pins.gpio22, // SCL  24
         &config,
     )?;
 
-
-
-
-    let led_module = Rc::new(RefCell::new(Ledmodule::new(
-        peripherals.pins.gpio15,
-        peripherals.ledc.channel0,
-        &timer,
-        None
+    let sorvo = Rc::new(RefCell::new(SorvoModule::new(
+        i2c,
+        Channel::C0,
+        SorvoConfig {
+            max_angle: 180,
+            min_angle: 0,
+            max_pivot: 35,
+            min_pivot: -35,
+            pulse_max: 2500,
+            pulse_min: 500,
+            offset: (180 / 2),
+        },
+        None,
     )?));
-    modules.insert(led_module.borrow().id().to_string(), led_module.clone());
+    modules.insert(sorvo.borrow().id().to_string(), sorvo.clone());
 
-
-  
-    // let  but = Rc::new(RefCell::new(Buttonmodule::new(peripherals.pins.gpio0)?));
-    let mut  btu = Buttonmodule::new(peripherals.pins.gpio12)?;
-
-
-    //   modules.insert(but.borrow().id().to_string(), but.clone());
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
-
     std::thread::spawn(move || {
         serial_command_reader(command_sender);
     });
 
     loop {
-        if btu.poll()? {
-            led_module.borrow_mut().toggle()?
-        }
+        // if btu.poll()? {
+        //     led_module.borrow_mut().toggle()?
+        // }
 
         if let Ok(command) = command_receiver.try_recv() {
             if let Some(m) = modules.get_mut(&command.id) {
                 m.borrow_mut().handle_command(&command.command)?;
             }
         }
-         sleep_ms(10);
+        sleep_ms(10);
     }
 }
 

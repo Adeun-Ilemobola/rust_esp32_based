@@ -1,11 +1,11 @@
 use crate::core::hardware::i2c::I2cDriver;
-use crate::core::hardware::{ledc, OutputPin};
+use crate::core::hardware::sleep_ms;
 use crate::core::modulecore::{Module, ModuleCore};
 use crate::utilities::logger::EventModeType;
-use crate::utilities::math::range_u32;
+use crate::utilities::math::{pulse_us_to_tick, range_i32};
 use crate::utilities::moduleconflg::SorvoConfig;
 use crate::utilities::serdeprotocol::{ModuleCommand, OutgoingEvent, SorvoCommandPayload};
-use esp_idf_svc::hal::rmt::PulseTicks;
+use anyhow::Ok;
 use pwm_pca9685::{Address, Channel, Pca9685};
 use serde_json::json;
 
@@ -16,10 +16,10 @@ pub struct SorvoModule<'d> {
     channel: Channel,
     can_serialize: bool,
 
-    offset: u32,
-    angle: u32,
-    min_pivot: u32,
-    max_pivot: u32,
+    offset: i32,
+    angle: i32,
+    min_pivot: i32,
+    max_pivot: i32,
 }
 
 impl<'d> SorvoModule<'d> {
@@ -32,7 +32,7 @@ impl<'d> SorvoModule<'d> {
 where {
         let mut s = SorvoModule {
             core: ModuleCore::new("Sorvo", "Sorvo-3423"),
-            pwm: Pca9685::new(i2c, Address::default()).unwrap(),
+            pwm: Pca9685::new(i2c, Address::default()).map_err(|e| anyhow::anyhow!("pca9685 init: {:?}", e))?,
             config: config.clone(),
             offset: config.offset,
             angle: config.min_pivot,
@@ -42,18 +42,48 @@ where {
             can_serialize: true,
         };
 
-        s.pwm.set_prescale(100).unwrap();
-        s.pwm.enable().unwrap();
+       s.pwm.set_prescale(100).map_err(|e| anyhow::anyhow!("set_prescale: {:?}", e))?;
+       s.pwm.enable().map_err(|e| anyhow::anyhow!("enable: {:?}", e))?;
 
         if cluster_id.is_some() {
             s.can_serialize = false
         }
 
         let _ = s.serialize(EventModeType::Register, cluster_id.clone());
+        s.set_offset(s.offset)?;
+         s.set_angle(0)?;
+        sleep_ms(5000);
+
+
+        let testrang:[i32; 4] =[35 ,10 ,0 -10 ,-35];
+         for f in testrang {
+            s.set_angle(f)?;
+             sleep_ms(600);
+            
+         }
 
         Ok(s)
     }
-    pub fn set_angle(&mut self, a: u32) -> anyhow::Result<()> {
+    pub fn set_offset(&mut self, a: i32) -> anyhow::Result<()> {
+        self.offset = a.clamp(self.config.min_angle, self.config.max_angle);
+         let pulse = range_i32(
+            self.offset,
+            self.config.min_angle,
+            self.config.max_angle,
+            self.config.pulse_min,
+            self.config.pulse_max,
+        );
+        self.pwm
+             .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
+            .unwrap();
+
+        if self.can_serialize {
+            let _ = self.serialize(EventModeType::State, None);
+        }
+        
+        Ok(())
+    }
+    pub fn set_angle(&mut self, a: i32) -> anyhow::Result<()> {
         //  -22  ,  25
         let pivotrang = a.clamp(self.min_pivot, self.max_pivot);
 
@@ -62,7 +92,7 @@ where {
 
         self.angle = raw_rang.clone();
 
-        let pulse = range_u32(
+        let pulse = range_i32(
             raw_rang,
             self.config.min_angle,
             self.config.max_angle,
@@ -70,7 +100,7 @@ where {
             self.config.pulse_max,
         );
         self.pwm
-            .set_channel_on_off(self.channel, 0, pulse.try_into().unwrap())
+            .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
             .unwrap();
 
         if self.can_serialize {
@@ -80,19 +110,20 @@ where {
         Ok(())
     }
 
-    pub fn set_min_pivot(&mut self, min_pivot: u32) {
+    pub fn set_min_pivot(&mut self, min_pivot: i32) {
         self.min_pivot = min_pivot.min(self.max_pivot);
         if self.can_serialize {
             let _ = self.serialize(EventModeType::State, None);
         }
     }
 
-    pub fn set_max_pivot(&mut self, max_pivot: u32) {
+    pub fn set_max_pivot(&mut self, max_pivot: i32) {
         self.max_pivot = max_pivot.max(self.min_pivot);
         if self.can_serialize {
             let _ = self.serialize(EventModeType::State, None);
         }
     }
+   
 
     pub fn get_event(
         &self,
@@ -140,8 +171,12 @@ impl<'d> Module for SorvoModule<'d> {
         match command {
             ModuleCommand::Sorvo(sorvo_command) => match sorvo_command {
                 SorvoCommandPayload::SetAngle { angle } => self.set_angle(angle.clone())?,
-                SorvoCommandPayload::SetMinPivot { min_pivot } => self.set_min_pivot(min_pivot.clone()),
-                SorvoCommandPayload::SetMaxPivot { max_pivot } => self.set_max_pivot(max_pivot.clone()),
+                SorvoCommandPayload::SetMinPivot { min_pivot } => {
+                    self.set_min_pivot(min_pivot.clone())
+                }
+                SorvoCommandPayload::SetMaxPivot { max_pivot } => {
+                    self.set_max_pivot(max_pivot.clone())
+                }
             },
             _ => {
                 // handle anything else

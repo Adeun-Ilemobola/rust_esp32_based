@@ -50,9 +50,9 @@ pub enum LedCommandPayload {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "command", rename_all = "snake_case")]
 pub enum SorvoCommandPayload {
-    SetAngle { angle: u32 },
-    SetMinPivot { min_pivot: u32 },
-    SetMaxPivot { max_pivot: u32 },
+    SetAngle { angle: i32 },
+    SetMinPivot { min_pivot: i32 },
+    SetMaxPivot { max_pivot: i32 },
 }
 
 //cluster Leds
