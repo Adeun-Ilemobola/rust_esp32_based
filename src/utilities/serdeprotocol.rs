@@ -36,7 +36,7 @@ pub struct IncomingCommand {
 pub enum ModuleCommand {
     Led(LedCommandPayload),
     ClusterLeds(ClusterCommandPayload),
-    Sorvo(SorvoCommandPayload),
+    Servo(ServoCommandPayload),
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,10 +46,10 @@ pub enum LedCommandPayload {
     Toggle,
 }
 
-//sorvo
+//Servo
 #[derive(Debug, Deserialize)]
 #[serde(tag = "command", rename_all = "snake_case")]
-pub enum SorvoCommandPayload {
+pub enum ServoCommandPayload {
     SetAngle { angle: i32 },
     SetMinPivot { min_pivot: i32 },
     SetMaxPivot { max_pivot: i32 },

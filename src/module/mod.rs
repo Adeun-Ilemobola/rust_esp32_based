@@ -2,4 +2,4 @@ pub mod ledmodule;
 pub mod  buttonmodule;
 pub mod  clusterled;
 
-pub mod  sorvomodule;
+pub mod  servomodule;

@@ -5,8 +5,8 @@ use crate::core::hardware::i2c::{I2cConfig, I2cDriver};
 use crate::core::hardware::ledc::{config::TimerConfig, LedcTimerDriver, Resolution};
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
-use crate::module::sorvomodule::SorvoModule;
-use crate::utilities::moduleconflg::SorvoConfig;
+use crate::module::servomodule::ServoModule;
+use crate::utilities::moduleconflg::ServoConfig;
 use crate::utilities::serdeprotocol::IncomingCommand;
 use module::ledmodule::Ledmodule;
 use pwm_pca9685::{ Channel};
@@ -36,10 +36,10 @@ fn main() -> anyhow::Result<()> {
         &config,
     )?;
 
-    let sorvo = Rc::new(RefCell::new(SorvoModule::new(
+    let sorvo = Rc::new(RefCell::new(ServoModule::new(
         i2c,
         Channel::C0,
-        SorvoConfig {
+        ServoConfig {
             max_angle: 180,
             min_angle: 0,
             max_pivot: 35,

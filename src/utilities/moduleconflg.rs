@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SorvoConfig {
+pub struct ServoConfig {
     pub max_angle: i32,
     pub min_angle: i32,
     pub offset: i32,

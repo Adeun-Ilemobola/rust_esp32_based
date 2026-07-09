@@ -3,16 +3,16 @@ use crate::core::hardware::sleep_ms;
 use crate::core::modulecore::{Module, ModuleCore};
 use crate::utilities::logger::EventModeType;
 use crate::utilities::math::{pulse_us_to_tick, range_i32};
-use crate::utilities::moduleconflg::SorvoConfig;
-use crate::utilities::serdeprotocol::{ModuleCommand, OutgoingEvent, SorvoCommandPayload};
+use crate::utilities::moduleconflg::ServoConfig;
+use crate::utilities::serdeprotocol::{ModuleCommand, OutgoingEvent, ServoCommandPayload};
 use anyhow::Ok;
 use pwm_pca9685::{Address, Channel, Pca9685};
 use serde_json::json;
 
-pub struct SorvoModule<'d> {
+pub struct ServoModule<'d> {
     core: ModuleCore,
     pwm: Pca9685<I2cDriver<'d>>,
-    config: SorvoConfig,
+    config: ServoConfig,
     channel: Channel,
     can_serialize: bool,
 
@@ -22,16 +22,16 @@ pub struct SorvoModule<'d> {
     max_pivot: i32,
 }
 
-impl<'d> SorvoModule<'d> {
+impl<'d> ServoModule<'d> {
     pub fn new(
         i2c: I2cDriver<'d>,
         channel: Channel,
-        config: SorvoConfig,
+        config: ServoConfig,
         cluster_id: Option<String>,
-    ) -> anyhow::Result<SorvoModule<'d>>
+    ) -> anyhow::Result<ServoModule<'d>>
 where {
-        let mut s = SorvoModule {
-            core: ModuleCore::new("Sorvo", "Sorvo-3423"),
+        let mut s = ServoModule {
+            core: ModuleCore::new("Servo", "Servo-3423"),
             pwm: Pca9685::new(i2c, Address::default()).map_err(|e| anyhow::anyhow!("pca9685 init: {:?}", e))?,
             config: config.clone(),
             offset: config.offset,
@@ -141,7 +141,7 @@ where {
             manuel_id: self.core.manuel_id.to_string(),
 
             kind: kind.to_string(),
-            moduletype: "sorvo".to_string(),
+            moduletype: "Servo".to_string(),
             payload: json!({
                         "config":self.config.clone(),
                         "offset":self.offset,
@@ -156,7 +156,7 @@ where {
     }
 }
 
-impl<'d> Module for SorvoModule<'d> {
+impl<'d> Module for ServoModule<'d> {
     fn id(&self) -> &String {
         &self.core.id
     }
@@ -169,12 +169,12 @@ impl<'d> Module for SorvoModule<'d> {
     }
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()> {
         match command {
-            ModuleCommand::Sorvo(sorvo_command) => match sorvo_command {
-                SorvoCommandPayload::SetAngle { angle } => self.set_angle(angle.clone())?,
-                SorvoCommandPayload::SetMinPivot { min_pivot } => {
+            ModuleCommand::Servo(Servo_command) => match Servo_command {
+                ServoCommandPayload::SetAngle { angle } => self.set_angle(angle.clone())?,
+                ServoCommandPayload::SetMinPivot { min_pivot } => {
                     self.set_min_pivot(min_pivot.clone())
                 }
-                SorvoCommandPayload::SetMaxPivot { max_pivot } => {
+                ServoCommandPayload::SetMaxPivot { max_pivot } => {
                     self.set_max_pivot(max_pivot.clone())
                 }
             },
