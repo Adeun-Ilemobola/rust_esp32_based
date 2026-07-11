@@ -12,9 +12,9 @@ pub struct ClusterLed <'d>{
 }
 
 impl <'d>ClusterLed<'d> {
-    pub fn new()-> anyhow::Result<ClusterLed<'d>>{
+    pub fn new(manuel_id:String,)-> anyhow::Result<ClusterLed<'d>>{
         let cluster = ClusterLed{
-            core: ModuleCore::new("Custer" , "cust-3434"),
+            core: ModuleCore::new("Custer" , &manuel_id),
             modules:HashMap::new()
         };
 

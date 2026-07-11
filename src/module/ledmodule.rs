@@ -17,6 +17,7 @@ impl<'d> Ledmodule<'d> {
     pub fn new<T, C>(
         pin: T,
         channel: C,
+        manuel_id:String,
         timer: &ledc::LedcTimerDriver<'d, ledc::LowSpeed>,
         cluster_id:Option<String>
     ) -> anyhow::Result<Ledmodule<'d>>
@@ -29,7 +30,7 @@ impl<'d> Ledmodule<'d> {
         let pwm = ledc::LedcDriver::new(channel, timer, pin)?;
 
         let mut ledmodule = Ledmodule {
-            core: ModuleCore::new("LED", "led-3423"),
+            core: ModuleCore::new("LED", &manuel_id),
             state: 0,
             pin: pin_number,
             pwm,

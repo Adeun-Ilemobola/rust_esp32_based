@@ -1,4 +1,5 @@
-use crate::core::hardware::i2c::I2cDriver;
+use crate::core::hardware::i2c::{I2c, I2cConfig, I2cDriver};
+use crate::core::hardware::{FromValueType, InputPin, OutputPin};
 use crate::core::hardware::sleep_ms;
 use crate::core::modulecore::{Module, ModuleCore};
 use crate::utilities::logger::EventModeType;
@@ -8,10 +9,14 @@ use crate::utilities::serdeprotocol::{ModuleCommand, OutgoingEvent, ServoCommand
 use anyhow::Ok;
 use pwm_pca9685::{Address, Channel, Pca9685};
 use serde_json::json;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+pub type SharedPwm<'d> = Rc<RefCell<Pca9685<I2cDriver<'d>>>>;
 
 pub struct ServoModule<'d> {
     core: ModuleCore,
-    pwm: Pca9685<I2cDriver<'d>>,
+    pwm: SharedPwm<'d>,
     config: ServoConfig,
     channel: Channel,
     can_serialize: bool,
@@ -23,16 +28,17 @@ pub struct ServoModule<'d> {
 }
 
 impl<'d> ServoModule<'d> {
+  
     pub fn new(
-        i2c: I2cDriver<'d>,
+        pwm: SharedPwm<'d>,
+        manuel_id:String,
         channel: Channel,
         config: ServoConfig,
         cluster_id: Option<String>,
-    ) -> anyhow::Result<ServoModule<'d>>
-where {
+    ) -> anyhow::Result<ServoModule<'d>> {
         let mut s = ServoModule {
-            core: ModuleCore::new("Servo", "Servo-3423"),
-            pwm: Pca9685::new(i2c, Address::default()).map_err(|e| anyhow::anyhow!("pca9685 init: {:?}", e))?,
+            core: ModuleCore::new("servo", &manuel_id),
+            pwm,
             config: config.clone(),
             offset: config.offset,
             angle: config.min_pivot,
@@ -41,9 +47,6 @@ where {
             channel: channel.clone(),
             can_serialize: true,
         };
-
-       s.pwm.set_prescale(100).map_err(|e| anyhow::anyhow!("set_prescale: {:?}", e))?;
-       s.pwm.enable().map_err(|e| anyhow::anyhow!("enable: {:?}", e))?;
 
         if cluster_id.is_some() {
             s.can_serialize = false
@@ -74,13 +77,14 @@ where {
             self.config.pulse_max,
         );
         self.pwm
-             .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
+            .borrow_mut()
+            .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
             .unwrap();
 
         if self.can_serialize {
             let _ = self.serialize(EventModeType::State, None);
         }
-        
+
         Ok(())
     }
     pub fn set_angle(&mut self, a: i32) -> anyhow::Result<()> {
@@ -100,6 +104,7 @@ where {
             self.config.pulse_max,
         );
         self.pwm
+            .borrow_mut()
             .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
             .unwrap();
 
@@ -141,7 +146,7 @@ where {
             manuel_id: self.core.manuel_id.to_string(),
 
             kind: kind.to_string(),
-            moduletype: "Servo".to_string(),
+            moduletype: self.core.module_type.to_string(),
             payload: json!({
                         "config":self.config.clone(),
                         "offset":self.offset,

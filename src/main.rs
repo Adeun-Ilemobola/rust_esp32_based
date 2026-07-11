@@ -1,7 +1,6 @@
 pub mod core;
 pub mod module;
 pub mod utilities;
-use crate::core::hardware::i2c::{I2cConfig, I2cDriver};
 use crate::core::hardware::ledc::{config::TimerConfig, LedcTimerDriver, Resolution};
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
@@ -23,21 +22,18 @@ fn main() -> anyhow::Result<()> {
     let mut modules: HashMap<String, ModuleHandle<'_>> = HashMap::new();
 
     let peripherals = Peripherals::take()?;
-    let config = I2cConfig::new().baudrate(400.kHz().into());
+    let hardware = HardwareContext::new(peripherals)?;
+
     // let timer_config = TimerConfig::new()
     //     .frequency(5_u32.kHz().into())
     //     .resolution(Resolution::Bits13);
     // let timer: LedcTimerDriver<'_, ledc::LowSpeed> = LedcTimerDriver::new(peripherals.ledc.timer0, &timer_config)?;
 
-    let i2c = I2cDriver::new(
-        peripherals.i2c0,
-        peripherals.pins.gpio21, // SDA  27
-        peripherals.pins.gpio22, // SCL  24
-        &config,
-    )?;
+    let pwm = hardware.servo_pwm;
 
     let sorvo = Rc::new(RefCell::new(ServoModule::new(
-        i2c,
+        pwm.clone(),
+        "sorvo1".to_string(),
         Channel::C0,
         ServoConfig {
             max_angle: 180,
@@ -51,6 +47,22 @@ fn main() -> anyhow::Result<()> {
         None,
     )?));
     modules.insert(sorvo.borrow().id().to_string(), sorvo.clone());
+    let sorvo1 = Rc::new(RefCell::new(ServoModule::new(
+        pwm.clone(),
+        "sorvo2".to_string(),
+        Channel::C1,
+        ServoConfig {
+            max_angle: 180,
+            min_angle: 0,
+            max_pivot: 35,
+            min_pivot: -35,
+            pulse_max: 2500,
+            pulse_min: 500,
+            offset: (180 / 2),
+        },
+        None,
+    )?));
+    modules.insert(sorvo1.borrow().id().to_string(), sorvo1.clone());
 
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
     std::thread::spawn(move || {

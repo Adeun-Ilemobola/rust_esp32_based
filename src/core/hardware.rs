@@ -1,12 +1,17 @@
+use anyhow::Ok;
 pub use esp_idf_svc::hal::delay::FreeRtos;
 pub use esp_idf_svc::hal::gpio::*;
 pub use esp_idf_svc::hal::peripherals::Peripherals;
 pub use esp_idf_svc::hal::ledc;
 pub use esp_idf_svc::partition::*;
 pub use esp_idf_svc::hal::units::*;
-pub use esp_idf_svc::hal::uart::UartDriver;  
+pub use esp_idf_svc::hal::uart::UartDriver;
+use pwm_pca9685::{Address, Pca9685};  
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 pub use esp_idf_svc::hal::i2c;
+pub use esp_idf_svc::hal::i2c::{I2c, I2cConfig, I2cDriver};
 
 pub struct OutputPinCore<'d> {
     pin_number: u8,
@@ -84,4 +89,50 @@ pub fn sleep_time(ms:u32){
 }
 pub fn sleep_ms(ms:u64){
     std::thread::sleep(Duration::from_millis(ms));
+}
+
+pub type SharedPwm<'d> = Rc<RefCell<Pca9685<I2cDriver<'d>>>>;
+
+
+pub struct HardwareContext<'d> {
+    pub servo_pwm: SharedPwm<'d>,
+}
+
+impl<'d> HardwareContext<'d> {
+    pub fn new(peripherals: Peripherals)-> anyhow::Result<HardwareContext<'d>>  {
+
+        let pwm = Self::create_shared_pwm(
+            peripherals.i2c0,
+            peripherals.pins.gpio21,
+            peripherals.pins.gpio22,
+        )?;
+
+        Ok(Self { 
+            servo_pwm: pwm
+        })
+        
+    }
+    pub fn create_shared_pwm<I2C, SDA, SCL>(
+        i2c: I2C,
+        sda: SDA,
+        scl: SCL,
+    ) -> anyhow::Result<SharedPwm<'d>>
+    where
+        I2C: I2c + 'd,
+        SDA: InputPin + OutputPin + 'd,
+        SCL: InputPin + OutputPin + 'd,
+    {
+         let i2c_config = I2cConfig::new().baudrate(400.kHz().into());
+        let i2c = I2cDriver::new(i2c, sda, scl, &i2c_config)?;
+
+        let mut pwm = Pca9685::new(i2c, Address::default())
+            .map_err(|e| anyhow::anyhow!("pca9685 init: {:?}", e))?;
+        pwm.set_prescale(100)
+            .map_err(|e| anyhow::anyhow!("set_prescale: {:?}", e))?;
+        pwm.enable()
+            .map_err(|e| anyhow::anyhow!("enable: {:?}", e))?;
+
+        Ok( Rc::new(RefCell::new(pwm)) )
+    }
+
 }
