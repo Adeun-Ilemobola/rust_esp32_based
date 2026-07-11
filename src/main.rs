@@ -4,7 +4,7 @@ pub mod utilities;
 use crate::core::hardware::ledc::{config::TimerConfig, LedcTimerDriver, Resolution};
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
-use crate::module::servomodule::ServoModule;
+// use crate::module::servomodule::ServoModule;
 use crate::utilities::moduleconflg::ServoConfig;
 use crate::utilities::serdeprotocol::IncomingCommand;
 use module::ledmodule::Ledmodule;
@@ -31,38 +31,38 @@ fn main() -> anyhow::Result<()> {
 
     let pwm = hardware.servo_pwm;
 
-    let sorvo = Rc::new(RefCell::new(ServoModule::new(
-        pwm.clone(),
-        "sorvo1".to_string(),
-        Channel::C0,
-        ServoConfig {
-            max_angle: 180,
-            min_angle: 0,
-            max_pivot: 35,
-            min_pivot: -35,
-            pulse_max: 2500,
-            pulse_min: 500,
-            offset: (180 / 2),
-        },
-        None,
-    )?));
-    modules.insert(sorvo.borrow().id().to_string(), sorvo.clone());
-    let sorvo1 = Rc::new(RefCell::new(ServoModule::new(
-        pwm.clone(),
-        "sorvo2".to_string(),
-        Channel::C1,
-        ServoConfig {
-            max_angle: 180,
-            min_angle: 0,
-            max_pivot: 35,
-            min_pivot: -35,
-            pulse_max: 2500,
-            pulse_min: 500,
-            offset: (180 / 2),
-        },
-        None,
-    )?));
-    modules.insert(sorvo1.borrow().id().to_string(), sorvo1.clone());
+    // let sorvo = Rc::new(RefCell::new(ServoModule::new(
+    //     pwm.clone(),
+    //     "sorvo1".to_string(),
+    //     Channel::C0,
+    //     ServoConfig {
+    //         max_angle: 180,
+    //         min_angle: 0,
+    //         max_pivot: 35,
+    //         min_pivot: -35,
+    //         pulse_max: 2500,
+    //         pulse_min: 500,
+    //         offset: (180 / 2),
+    //     },
+    //     None,
+    // )?));
+    // modules.insert(sorvo.borrow().id().to_string(), sorvo.clone());
+    // let sorvo1 = Rc::new(RefCell::new(ServoModule::new(
+    //     pwm.clone(),
+    //     "sorvo2".to_string(),
+    //     Channel::C1,
+    //     ServoConfig {
+    //         max_angle: 180,
+    //         min_angle: 0,
+    //         max_pivot: 35,
+    //         min_pivot: -35,
+    //         pulse_max: 2500,
+    //         pulse_min: 500,
+    //         offset: (180 / 2),
+    //     },
+    //     None,
+    // )?));
+    // modules.insert(sorvo1.borrow().id().to_string(), sorvo1.clone());
 
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
     std::thread::spawn(move || {
