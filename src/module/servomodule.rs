@@ -1,18 +1,13 @@
-use crate::core::hardware::i2c::{I2c, I2cConfig, I2cDriver};
-use crate::core::hardware::{FromValueType, InputPin, OutputPin};
-use crate::core::hardware::sleep_ms;
+use crate::core::hardware::{SharedPwm, sleep_ms};
 use crate::core::modulecore::{Module, ModuleCore};
-use crate::utilities::logger::EventModeType;
 use crate::utilities::math::{pulse_us_to_tick, range_i32};
 use crate::utilities::moduleconflg::ServoConfig;
-use crate::utilities::serdeprotocol::{ModuleCommand, OutgoingEvent, ServoCommandPayload};
+use crate::utilities::serdeprotocol::{
+    EventModeType, ModuleCommand, ModuleType, OutgoingEvent, ServoCommandPayload,
+};
 use anyhow::Ok;
-use pwm_pca9685::{Address, Channel, Pca9685};
+use pwm_pca9685::Channel;
 use serde_json::json;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-pub type SharedPwm<'d> = Rc<RefCell<Pca9685<I2cDriver<'d>>>>;
 
 pub struct ServoModule<'d> {
     core: ModuleCore,
@@ -28,10 +23,9 @@ pub struct ServoModule<'d> {
 }
 
 impl<'d> ServoModule<'d> {
-  
     pub fn new(
         pwm: SharedPwm<'d>,
-        manuel_id:String,
+        manuel_id: String,
         channel: Channel,
         config: ServoConfig,
         cluster_id: Option<String>,
@@ -54,22 +48,20 @@ impl<'d> ServoModule<'d> {
 
         let _ = s.serialize(EventModeType::Register, cluster_id.clone());
         s.set_offset(s.offset)?;
-         s.set_angle(0)?;
+        s.set_angle(0)?;
         sleep_ms(5000);
 
-
-        let testrang:[i32; 4] =[35 ,10 ,0 -10 ,-35];
-         for f in testrang {
+        let testrang: [i32; 4] = [35, 10, -10, -35];
+        for f in testrang {
             s.set_angle(f)?;
-             sleep_ms(600);
-            
-         }
+            sleep_ms(600);
+        }
 
         Ok(s)
     }
     pub fn set_offset(&mut self, a: i32) -> anyhow::Result<()> {
         self.offset = a.clamp(self.config.min_angle, self.config.max_angle);
-         let pulse = range_i32(
+        let pulse = range_i32(
             self.offset,
             self.config.min_angle,
             self.config.max_angle,
@@ -128,27 +120,21 @@ impl<'d> ServoModule<'d> {
             let _ = self.serialize(EventModeType::State, None);
         }
     }
-   
 
     pub fn get_event(
         &self,
         event_mode: EventModeType,
         cluster_id: Option<String>,
     ) -> anyhow::Result<OutgoingEvent> {
-        let kind = match event_mode {
-            EventModeType::Register => "registered",
-            EventModeType::State => "event",
-        };
-
         Ok(OutgoingEvent {
             id: self.id().to_string(),
             version: "1.0".to_string(),
             manuel_id: self.core.manuel_id.to_string(),
 
-            kind: kind.to_string(),
-            moduletype: self.core.module_type.to_string(),
+            kind: event_mode,
+            moduletype: ModuleType::Servo,
             payload: json!({
-                        "config":self.config.clone(),
+            "config":self.config.clone(),
                         "offset":self.offset,
                         "angle": self.angle,
             "min_pivot":self.min_pivot,
@@ -174,7 +160,7 @@ impl<'d> Module for ServoModule<'d> {
     }
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()> {
         match command {
-            ModuleCommand::Servo(Servo_command) => match Servo_command {
+            ModuleCommand::Servo(servo_command) => match servo_command {
                 ServoCommandPayload::SetAngle { angle } => self.set_angle(angle.clone())?,
                 ServoCommandPayload::SetMinPivot { min_pivot } => {
                     self.set_min_pivot(min_pivot.clone())

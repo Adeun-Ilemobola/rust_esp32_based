@@ -1,14 +1,9 @@
 pub mod core;
 pub mod module;
 pub mod utilities;
-use crate::core::hardware::ledc::{config::TimerConfig, LedcTimerDriver, Resolution};
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
-// use crate::module::servomodule::ServoModule;
-use crate::utilities::moduleconflg::ServoConfig;
 use crate::utilities::serdeprotocol::IncomingCommand;
-use module::ledmodule::Ledmodule;
-use pwm_pca9685::{ Channel};
 use std::io;
 use std::io::{BufRead, ErrorKind};
 use std::sync::mpsc;
@@ -29,10 +24,8 @@ fn print_welcome_message(wifi_status: &str, bluetooth_status: &str) {
         let minimum_free_ram = sys::esp_get_minimum_free_heap_size() as usize;
 
         let mut flash_size = 0_u32;
-        let flash_result = sys::esp_flash_get_physical_size(
-            sys::esp_flash_default_chip,
-            &mut flash_size,
-        );
+        let flash_result =
+            sys::esp_flash_get_physical_size(sys::esp_flash_default_chip, &mut flash_size);
 
         (
             total_ram,
@@ -51,7 +44,11 @@ fn print_welcome_message(wifi_status: &str, bluetooth_status: &str) {
 
     log::info!("==================================================");
     log::info!("Welcome! Your ESP32 is up and running.");
-    log::info!("Firmware: {} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    log::info!(
+        "Firmware: {} v{}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    );
     log::info!(
         "ESP-IDF: {}.{}.{}",
         sys::ESP_IDF_VERSION_MAJOR,
@@ -99,51 +96,11 @@ fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
     let mut modules: HashMap<String, ModuleHandle<'_>> = HashMap::new();
+    let p = Peripherals::take()?;
 
-    let peripherals = Peripherals::take()?;
-    let hardware = HardwareContext::new(peripherals)?;
+    let hardware = HardwareContext::new(p.i2c0, p.pins.gpio21, p.pins.gpio22, p.ledc.timer0)?;
 
     print_welcome_message("not initialized", "not initialized");
-
-    // let timer_config = TimerConfig::new()
-    //     .frequency(5_u32.kHz().into())
-    //     .resolution(Resolution::Bits13);
-    // let timer: LedcTimerDriver<'_, ledc::LowSpeed> = LedcTimerDriver::new(peripherals.ledc.timer0, &timer_config)?;
-
-    let pwm = hardware.servo_pwm;
-
-    // let sorvo = Rc::new(RefCell::new(ServoModule::new(
-    //     pwm.clone(),
-    //     "sorvo1".to_string(),
-    //     Channel::C0,
-    //     ServoConfig {
-    //         max_angle: 180,
-    //         min_angle: 0,
-    //         max_pivot: 35,
-    //         min_pivot: -35,
-    //         pulse_max: 2500,
-    //         pulse_min: 500,
-    //         offset: (180 / 2),
-    //     },
-    //     None,
-    // )?));
-    // modules.insert(sorvo.borrow().id().to_string(), sorvo.clone());
-    // let sorvo1 = Rc::new(RefCell::new(ServoModule::new(
-    //     pwm.clone(),
-    //     "sorvo2".to_string(),
-    //     Channel::C1,
-    //     ServoConfig {
-    //         max_angle: 180,
-    //         min_angle: 0,
-    //         max_pivot: 35,
-    //         min_pivot: -35,
-    //         pulse_max: 2500,
-    //         pulse_min: 500,
-    //         offset: (180 / 2),
-    //     },
-    //     None,
-    // )?));
-    // modules.insert(sorvo1.borrow().id().to_string(), sorvo1.clone());
 
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
     std::thread::spawn(move || {
