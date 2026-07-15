@@ -22,7 +22,7 @@ impl<'d> Buttonmodule<'d> {
         T: InputPin + 'd,
     {
         let buttonmodule = Buttonmodule {
-            core: ModuleCore::new("Button", "btu-3434"),
+            core: ModuleCore::new(ModuleType::Button, "btu-3434"),
             state: Level::High,
             pin: pin.pin() as u8,
             pin_driver: InputPinCore::new(pin, Pull::Up)?,
@@ -86,7 +86,7 @@ impl<'d> Module for Buttonmodule<'d> {
     fn core(&self) -> &ModuleCore {
         &self.core
     }
-    fn get_module_type(&self) -> &String {
+    fn get_module_type(&self) -> &ModuleType {
         &self.core.module_type
     }
     fn handle_command(

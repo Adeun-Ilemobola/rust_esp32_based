@@ -19,7 +19,7 @@ pub struct ClusterLed<'d> {
 impl<'d> ClusterLed<'d> {
     pub fn new(manuel_id: String) -> anyhow::Result<ClusterLed<'d>> {
         let cluster = ClusterLed {
-            core: ModuleCore::new("Custer", &manuel_id),
+            core: ModuleCore::new(ModuleType::LedCluster, &manuel_id),
             modules: HashMap::new(),
         };
 
@@ -54,7 +54,7 @@ impl<'d> Module for ClusterLed<'d> {
     fn core(&self) -> &ModuleCore {
         &self.core
     }
-    fn get_module_type(&self) -> &String {
+    fn get_module_type(&self) -> &ModuleType {
         &self.core.module_type
     }
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()> {

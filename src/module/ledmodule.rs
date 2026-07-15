@@ -30,7 +30,7 @@ impl<'d> Ledmodule<'d> {
         let pwm = ledc::LedcDriver::new(channel, timer, pin)?;
 
         let mut ledmodule = Ledmodule {
-            core: ModuleCore::new("LED", &manuel_id),
+            core: ModuleCore::new(ModuleType::Led, &manuel_id),
             state: 0,
             pin: pin_number,
             pwm,
@@ -100,7 +100,7 @@ impl<'d> Module for Ledmodule<'d> {
     fn core(&self) -> &ModuleCore {
         &self.core
     }
-    fn get_module_type(&self) -> &String {
+    fn get_module_type(&self) -> &ModuleType {
         &self.core.module_type
     }
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()> {

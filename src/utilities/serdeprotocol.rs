@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize , Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum ModuleType {
     Servo,

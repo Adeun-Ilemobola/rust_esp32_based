@@ -31,7 +31,7 @@ impl<'d> ServoModule<'d> {
         cluster_id: Option<String>,
     ) -> anyhow::Result<ServoModule<'d>> {
         let mut s = ServoModule {
-            core: ModuleCore::new("servo", &manuel_id),
+            core: ModuleCore::new(ModuleType::Servo, &manuel_id),
             pwm,
             config: config.clone(),
             offset: config.offset,
@@ -155,7 +155,7 @@ impl<'d> Module for ServoModule<'d> {
     fn core(&self) -> &ModuleCore {
         &self.core
     }
-    fn get_module_type(&self) -> &String {
+    fn get_module_type(&self) -> &ModuleType {
         &self.core.module_type
     }
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()> {
