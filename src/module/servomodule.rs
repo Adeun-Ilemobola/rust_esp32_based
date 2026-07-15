@@ -20,6 +20,9 @@ pub struct ServoModule<'d> {
     angle: i32,
     min_pivot: i32,
     max_pivot: i32,
+
+    event_mode: EventModeType,
+    cluster_id:Option<String>
 }
 
 impl<'d> ServoModule<'d> {
@@ -40,13 +43,16 @@ impl<'d> ServoModule<'d> {
             min_pivot: config.min_pivot,
             channel: channel.clone(),
             can_serialize: true,
+            event_mode:EventModeType::Register,
+            cluster_id:cluster_id.clone()
         };
 
         if cluster_id.is_some() {
             s.can_serialize = false
         }
 
-        let _ = s.serialize(EventModeType::Register, cluster_id.clone());
+        let _ = s.serialize();
+        s.event_mode = EventModeType::State;
         s.set_offset(s.offset)?;
         s.set_angle(0)?;
         sleep_ms(5000);
@@ -74,7 +80,7 @@ impl<'d> ServoModule<'d> {
             .unwrap();
 
         if self.can_serialize {
-            let _ = self.serialize(EventModeType::State, None);
+            let _ = self.serialize();
         }
 
         Ok(())
@@ -101,7 +107,7 @@ impl<'d> ServoModule<'d> {
             .unwrap();
 
         if self.can_serialize {
-            let _ = self.serialize(EventModeType::State, None);
+            let _ = self.serialize();
         }
 
         Ok(())
@@ -110,28 +116,24 @@ impl<'d> ServoModule<'d> {
     pub fn set_min_pivot(&mut self, min_pivot: i32) {
         self.min_pivot = min_pivot.min(self.max_pivot);
         if self.can_serialize {
-            let _ = self.serialize(EventModeType::State, None);
+            let _ = self.serialize();
         }
     }
 
     pub fn set_max_pivot(&mut self, max_pivot: i32) {
         self.max_pivot = max_pivot.max(self.min_pivot);
         if self.can_serialize {
-            let _ = self.serialize(EventModeType::State, None);
+            let _ = self.serialize();
         }
     }
 
-    pub fn get_event(
-        &self,
-        event_mode: EventModeType,
-        cluster_id: Option<String>,
-    ) -> anyhow::Result<OutgoingEvent> {
+    pub fn get_event( &self,) -> anyhow::Result<OutgoingEvent> {
         Ok(OutgoingEvent {
             id: self.id().to_string(),
             version: "1.0".to_string(),
             manuel_id: self.core.manuel_id.to_string(),
 
-            kind: event_mode,
+            kind: self.event_mode.clone(),
             moduletype: ModuleType::Servo,
             payload: json!({
             "config":self.config.clone(),
@@ -142,7 +144,7 @@ impl<'d> ServoModule<'d> {
 
                     }),
             generated_info: None,
-            master_id: cluster_id,
+            master_id: self.cluster_id.clone(),
         })
     }
 }
@@ -176,12 +178,9 @@ impl<'d> Module for ServoModule<'d> {
         Ok(())
     }
 
-    fn serialize(
-        &self,
-        event_mode: EventModeType,
-        cluster_id: Option<String>,
-    ) -> anyhow::Result<()> {
-        serde_json::to_string(&self.get_event(event_mode, cluster_id)?)
+    fn serialize(&self) -> anyhow::Result<()> {
+
+        serde_json::to_string(&self.get_event()?)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 

@@ -14,21 +14,25 @@ type ModuleHandle<'a> = Rc<RefCell<dyn Module + 'a>>;
 pub struct ClusterLed<'d> {
     core: ModuleCore,
     modules: HashMap<String, ModuleHandle<'d>>,
+    event_mode: EventModeType,
+
 }
 
 impl<'d> ClusterLed<'d> {
     pub fn new(manuel_id: String) -> anyhow::Result<ClusterLed<'d>> {
-        let cluster = ClusterLed {
+        let mut cluster = ClusterLed {
             core: ModuleCore::new(ModuleType::LedCluster, &manuel_id),
             modules: HashMap::new(),
+            event_mode:EventModeType::Register,
         };
+        cluster.serialize();
+        cluster.event_mode = EventModeType::State;
 
         Ok(cluster)
     }
     pub fn get_event(
         &self,
-        event_mode: EventModeType,
-        _cluster_id: Option<String>,
+      
     ) -> anyhow::Result<OutgoingEvent> {
         let mut temp_child_payload: Vec<Value> = vec![];
 
@@ -37,7 +41,7 @@ impl<'d> ClusterLed<'d> {
             version: "1.0".to_string(),
             manuel_id: self.core.manuel_id.to_string(),
 
-            kind: event_mode,
+            kind: self.event_mode.clone(),
             moduletype: ModuleType::LedCluster,
             payload: json!([temp_child_payload]),
             generated_info: None,
@@ -61,16 +65,16 @@ impl<'d> Module for ClusterLed<'d> {
         match command {
             ModuleCommand::ClusterLeds(c) => match c {
                 ClusterCommandPayload::SetAll { state } => {
-                    self.serialize(EventModeType::State, Some(self.id().clone()))?
+                    self.serialize()?
                 }
                 ClusterCommandPayload::SetState { id, state } => {
-                    self.serialize(EventModeType::State, Some(self.id().clone()))?
+                     self.serialize()?
                 }
                 ClusterCommandPayload::Toggle { id, state } => {
-                    self.serialize(EventModeType::State, Some(self.id().clone()))?
+                     self.serialize()?
                 }
                 ClusterCommandPayload::ToggleAll => {
-                    self.serialize(EventModeType::State, Some(self.id().clone()))?
+                     self.serialize()?
                 }
             },
 
@@ -82,11 +86,9 @@ impl<'d> Module for ClusterLed<'d> {
     }
 
     fn serialize(
-        &self,
-        event_mode: EventModeType,
-        cluster_id: Option<String>,
+        &self
     ) -> anyhow::Result<()> {
-        serde_json::to_string(&self.get_event(event_mode, cluster_id)?)
+        serde_json::to_string(&self.get_event()?)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 

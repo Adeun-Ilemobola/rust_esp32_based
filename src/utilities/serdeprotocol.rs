@@ -10,7 +10,7 @@ pub enum ModuleType {
     LedCluster,
     Button,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize ,Clone)]
 pub enum EventModeType {
     #[serde(rename = "event")]
     State,
@@ -24,7 +24,7 @@ pub enum EspCommand {
     Ping,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize  , Clone)]
 pub struct OutgoingEvent {
     pub id: String,
     pub manuel_id: String,

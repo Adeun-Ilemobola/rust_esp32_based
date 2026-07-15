@@ -12,6 +12,8 @@ pub struct Ledmodule<'d> {
     pin: u8,
     pwm: ledc::LedcDriver<'d>,
     can_serialize: bool,
+    event_mode: EventModeType,
+    cluster_id: Option<String>,
 }
 impl<'d> Ledmodule<'d> {
     pub fn new<T, C>(
@@ -35,22 +37,27 @@ impl<'d> Ledmodule<'d> {
             pin: pin_number,
             pwm,
             can_serialize: true,
+            cluster_id:cluster_id.clone(),
+            event_mode:EventModeType::Register
         };
         if cluster_id.is_some() {
             ledmodule.can_serialize = false
         }
 
-        let _ = ledmodule.serialize(EventModeType::Register, cluster_id.clone());
+        let _ = ledmodule.serialize();
+
+        ledmodule.event_mode =EventModeType::State;
 
         Ok(ledmodule)
     }
 
     pub fn set_state(&mut self, state: u32) -> anyhow::Result<()> {
+
         let p = range_u32(state, 0, 100, 0, self.pwm.get_max_duty());
         self.pwm.set_duty(p)?;
         self.state = state;
         if self.can_serialize {
-            let _ = self.serialize(EventModeType::State, None);
+            let _ = self.serialize();
         }
 
         Ok(())
@@ -73,21 +80,19 @@ impl<'d> Ledmodule<'d> {
     }
     pub fn get_event(
         &self,
-        event_mode: EventModeType,
-        cluster_id: Option<String>,
     ) -> anyhow::Result<OutgoingEvent> {
         Ok(OutgoingEvent {
             id: self.id().to_string(),
             version: "1.0".to_string(),
             manuel_id: self.core.manuel_id.to_string(),
 
-            kind: event_mode,
+            kind: self.event_mode.clone(),
             moduletype: ModuleType::Led,
             payload: json!({
                 "state": self.state
             }),
             generated_info: None,
-            master_id: cluster_id,
+            master_id: self.cluster_id.clone(),
         })
     }
 }
@@ -116,12 +121,8 @@ impl<'d> Module for Ledmodule<'d> {
         Ok(())
     }
 
-    fn serialize(
-        &self,
-        event_mode: EventModeType,
-        cluster_id: Option<String>,
-    ) -> anyhow::Result<()> {
-        serde_json::to_string(&self.get_event(event_mode, cluster_id)?)
+    fn serialize( &self) -> anyhow::Result<()> {
+        serde_json::to_string(&self.get_event()?)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 

@@ -14,6 +14,7 @@ pub struct Buttonmodule<'d> {
     pin_driver: InputPinCore<'d>,
     last_state: Level,
     last_change_time: std::time::Instant,
+    event_mode: EventModeType,
 }
 
 impl<'d> Buttonmodule<'d> {
@@ -21,7 +22,7 @@ impl<'d> Buttonmodule<'d> {
     where
         T: InputPin + 'd,
     {
-        let buttonmodule = Buttonmodule {
+        let mut buttonmodule = Buttonmodule {
             core: ModuleCore::new(ModuleType::Button, "btu-3434"),
             state: Level::High,
             pin: pin.pin() as u8,
@@ -29,9 +30,11 @@ impl<'d> Buttonmodule<'d> {
             last_state: Level::High,
             last_change_time: std::time::Instant::now(),
             prev_state: Level::High,
+            event_mode:EventModeType::Register,
         };
 
-        let _ = buttonmodule.serialize(EventModeType::Register, None);
+        let _ = buttonmodule.serialize();
+        buttonmodule.event_mode = EventModeType::State;
 
         Ok(buttonmodule)
     }
@@ -54,27 +57,25 @@ impl<'d> Buttonmodule<'d> {
         if self.state != self.prev_state {
             let pressed = self.state == Level::Low;
             self.prev_state = self.state;
-            self.serialize(EventModeType::State, None)?;
+            self.serialize()?;
             return Ok(pressed);
         }
         Ok(false)
     }
     pub fn get_event(
         &self,
-        event_mode: EventModeType,
-        cluster_id: Option<String>,
     ) -> anyhow::Result<OutgoingEvent> {
         Ok(OutgoingEvent {
             id: self.id().to_string(),
             manuel_id: self.core.manuel_id.to_string(),
             version: "1.0".to_string(),
-            kind: event_mode,
+            kind: self.event_mode.clone(),
             moduletype: ModuleType::Button,
             payload: json!({
                "pressed": self.state == Level::Low
             }),
             generated_info: None,
-            master_id: cluster_id,
+            master_id: None,
         })
     }
 }
@@ -96,12 +97,9 @@ impl<'d> Module for Buttonmodule<'d> {
         Ok(())
     }
 
-    fn serialize(
-        &self,
-        event_mode: EventModeType,
-        cluster_id: Option<String>,
+    fn serialize(&self,
     ) -> anyhow::Result<()> {
-        serde_json::to_string(&self.get_event(event_mode, cluster_id)?)
+        serde_json::to_string(&self.get_event()?)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 

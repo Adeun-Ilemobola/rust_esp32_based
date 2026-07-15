@@ -31,9 +31,5 @@ pub trait Module {
     fn id(&self) -> &String;
     fn get_module_type(&self) -> &ModuleType;
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()>;
-    fn serialize(
-        &self,
-        event_mode: EventModeType,
-        cluster_id: Option<String>,
-    ) -> anyhow::Result<()>;
+    fn serialize(&self) -> anyhow::Result<()>;
 }
