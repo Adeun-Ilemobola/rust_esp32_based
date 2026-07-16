@@ -1,4 +1,4 @@
-use crate::core::hardware::{SharedPwm, sleep_ms};
+use crate::core::hardware::{sleep_ms, SharedPwm};
 use crate::core::modulecore::{Module, ModuleCore};
 use crate::utilities::math::{pulse_us_to_tick, range_i32};
 use crate::utilities::moduleconflg::ServoConfig;
@@ -22,7 +22,7 @@ pub struct ServoModule<'d> {
     max_pivot: i32,
 
     event_mode: EventModeType,
-    cluster_id:Option<String>
+    cluster_id: Option<String>,
 }
 
 impl<'d> ServoModule<'d> {
@@ -43,8 +43,8 @@ impl<'d> ServoModule<'d> {
             min_pivot: config.min_pivot,
             channel: channel.clone(),
             can_serialize: true,
-            event_mode:EventModeType::Register,
-            cluster_id:cluster_id.clone()
+            event_mode: EventModeType::Register,
+            cluster_id: cluster_id.clone(),
         };
 
         if cluster_id.is_some() {
@@ -55,12 +55,12 @@ impl<'d> ServoModule<'d> {
         s.event_mode = EventModeType::State;
         s.set_offset(s.offset)?;
         s.set_angle(0)?;
-        sleep_ms(5000);
+       
 
         let testrang: [i32; 4] = [35, 10, -10, -35];
         for f in testrang {
             s.set_angle(f)?;
-            sleep_ms(600);
+          
         }
 
         Ok(s)
@@ -113,6 +113,13 @@ impl<'d> ServoModule<'d> {
         Ok(())
     }
 
+    pub fn pivot_angle(&self) -> i32 {
+        self.angle - self.offset
+    }
+    pub fn angle (&self) -> i32{
+        self.angle
+    }
+
     pub fn set_min_pivot(&mut self, min_pivot: i32) {
         self.min_pivot = min_pivot.min(self.max_pivot);
         if self.can_serialize {
@@ -127,7 +134,7 @@ impl<'d> ServoModule<'d> {
         }
     }
 
-    pub fn get_event( &self,) -> anyhow::Result<OutgoingEvent> {
+    pub fn get_event(&self) -> anyhow::Result<OutgoingEvent> {
         Ok(OutgoingEvent {
             id: self.id().to_string(),
             version: "1.0".to_string(),
@@ -163,12 +170,12 @@ impl<'d> Module for ServoModule<'d> {
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()> {
         match command {
             ModuleCommand::Servo(servo_command) => match servo_command {
-                ServoCommandPayload::SetAngle { angle } => self.set_angle(angle.clone())?,
+                ServoCommandPayload::SetAngle { angle } => self.set_angle(*angle)?,
                 ServoCommandPayload::SetMinPivot { min_pivot } => {
-                    self.set_min_pivot(min_pivot.clone())
+                    self.set_min_pivot(*min_pivot)
                 }
                 ServoCommandPayload::SetMaxPivot { max_pivot } => {
-                    self.set_max_pivot(max_pivot.clone())
+                    self.set_max_pivot(*max_pivot)
                 }
             },
             _ => {
@@ -179,7 +186,6 @@ impl<'d> Module for ServoModule<'d> {
     }
 
     fn serialize(&self) -> anyhow::Result<()> {
-
         serde_json::to_string(&self.get_event()?)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));

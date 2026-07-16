@@ -30,7 +30,7 @@ impl<'d> Buttonmodule<'d> {
             last_state: Level::High,
             last_change_time: std::time::Instant::now(),
             prev_state: Level::High,
-            event_mode:EventModeType::Register,
+            event_mode: EventModeType::Register,
         };
 
         let _ = buttonmodule.serialize();
@@ -62,9 +62,7 @@ impl<'d> Buttonmodule<'d> {
         }
         Ok(false)
     }
-    pub fn get_event(
-        &self,
-    ) -> anyhow::Result<OutgoingEvent> {
+    pub fn get_event(&self) -> anyhow::Result<OutgoingEvent> {
         Ok(OutgoingEvent {
             id: self.id().to_string(),
             manuel_id: self.core.manuel_id.to_string(),
@@ -97,8 +95,7 @@ impl<'d> Module for Buttonmodule<'d> {
         Ok(())
     }
 
-    fn serialize(&self,
-    ) -> anyhow::Result<()> {
+    fn serialize(&self) -> anyhow::Result<()> {
         serde_json::to_string(&self.get_event()?)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));

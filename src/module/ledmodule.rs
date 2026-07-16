@@ -1,4 +1,4 @@
-use crate::core::hardware::{LedTimer, OutputPin, ledc};
+use crate::core::hardware::{ledc, LedTimer, OutputPin};
 use crate::core::modulecore::{Module, ModuleCore};
 use crate::utilities::math::range_u32;
 use crate::utilities::serdeprotocol::{
@@ -37,8 +37,8 @@ impl<'d> Ledmodule<'d> {
             pin: pin_number,
             pwm,
             can_serialize: true,
-            cluster_id:cluster_id.clone(),
-            event_mode:EventModeType::Register
+            cluster_id: cluster_id.clone(),
+            event_mode: EventModeType::Register,
         };
         if cluster_id.is_some() {
             ledmodule.can_serialize = false
@@ -46,13 +46,12 @@ impl<'d> Ledmodule<'d> {
 
         let _ = ledmodule.serialize();
 
-        ledmodule.event_mode =EventModeType::State;
+        ledmodule.event_mode = EventModeType::State;
 
         Ok(ledmodule)
     }
 
     pub fn set_state(&mut self, state: u32) -> anyhow::Result<()> {
-
         let p = range_u32(state, 0, 100, 0, self.pwm.get_max_duty());
         self.pwm.set_duty(p)?;
         self.state = state;
@@ -78,9 +77,7 @@ impl<'d> Ledmodule<'d> {
     pub fn event_mode(&mut self, mode: bool) {
         self.can_serialize = mode;
     }
-    pub fn get_event(
-        &self,
-    ) -> anyhow::Result<OutgoingEvent> {
+    pub fn get_event(&self) -> anyhow::Result<OutgoingEvent> {
         Ok(OutgoingEvent {
             id: self.id().to_string(),
             version: "1.0".to_string(),
@@ -111,7 +108,7 @@ impl<'d> Module for Ledmodule<'d> {
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()> {
         match command {
             ModuleCommand::Led(led_command) => match led_command {
-                LedCommandPayload::SetState { state } => self.set_state(state.clone())?,
+                LedCommandPayload::SetState { state } => self.set_state(*state)?,
                 LedCommandPayload::Toggle => self.toggle()?,
             },
             _ => {
@@ -121,7 +118,7 @@ impl<'d> Module for Ledmodule<'d> {
         Ok(())
     }
 
-    fn serialize( &self) -> anyhow::Result<()> {
+    fn serialize(&self) -> anyhow::Result<()> {
         serde_json::to_string(&self.get_event()?)
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));

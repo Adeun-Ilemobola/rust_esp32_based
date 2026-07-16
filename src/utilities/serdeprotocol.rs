@@ -2,20 +2,20 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, Serialize, Deserialize , Clone)]
-#[serde(rename_all = "snake_case")]
 pub enum ModuleType {
     Servo,
     Led,
     Imu,
     LedCluster,
     Button,
+    Lidar,
+    SysLog
 }
-#[derive(Debug, Serialize, Deserialize ,Clone)]
+#[derive(Debug, Serialize, Deserialize ,Clone )]
 pub enum EventModeType {
-    #[serde(rename = "event")]
     State,
-    #[serde(rename = "registered")]
     Register,
+    SysLog
 }
 
 #[derive(serde::Deserialize)]
@@ -24,7 +24,7 @@ pub enum EspCommand {
     Ping,
 }
 
-#[derive(Debug, Serialize, Deserialize  , Clone)]
+#[derive(Debug, Serialize, Deserialize , Clone )]
 pub struct OutgoingEvent {
     pub id: String,
     pub manuel_id: String,
@@ -48,7 +48,7 @@ pub struct IncomingCommand {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "moduletype", content = "payload", rename_all = "snake_case")]
+#[serde(tag = "moduletype", content = "payload", )]
 pub enum ModuleCommand {
     Led(LedCommandPayload),
     ClusterLeds(ClusterCommandPayload),
@@ -56,7 +56,7 @@ pub enum ModuleCommand {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "command", rename_all = "snake_case")]
+#[serde(tag = "command", )]
 pub enum LedCommandPayload {
     SetState { state: u32 },
     Toggle,
@@ -64,7 +64,7 @@ pub enum LedCommandPayload {
 
 //Servo
 #[derive(Debug, Deserialize)]
-#[serde(tag = "command", rename_all = "snake_case")]
+#[serde(tag = "command", )]
 pub enum ServoCommandPayload {
     SetAngle { angle: i32 },
     SetMinPivot { min_pivot: i32 },
@@ -73,7 +73,7 @@ pub enum ServoCommandPayload {
 
 //cluster Leds
 #[derive(Debug, Deserialize)]
-#[serde(tag = "command", rename_all = "snake_case")]
+#[serde(tag = "command", )]
 pub enum ClusterCommandPayload {
     ToggleAll,
     SetAll { state: u32 },
@@ -81,3 +81,10 @@ pub enum ClusterCommandPayload {
     Toggle { id: String, state: u32 },
     SetState { id: String, state: u32 },
 }
+
+
+// ---- Lidar
+
+
+
+
