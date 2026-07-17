@@ -1,5 +1,6 @@
-use crate::utilities::serdeprotocol::{EventModeType, ModuleCommand, ModuleType};
 use uuid::Uuid;
+
+use crate::protocol::{command::ModuleCommand, registration::ModuleType};
 
 #[derive(Debug, Clone)]
 pub struct ModuleCore {
@@ -31,5 +32,30 @@ pub trait Module {
     fn id(&self) -> &String;
     fn get_module_type(&self) -> &ModuleType;
     fn handle_command(&mut self, command: &ModuleCommand) -> anyhow::Result<()>;
-    fn serialize(&self) -> anyhow::Result<()>;
+}
+
+
+
+pub mod emit {
+    use crate::protocol::{module_event::ModuleEvent, registration::Registration};
+
+    pub fn registration(data: Registration) {
+        // serialize and send registration
+        serde_json::to_string(&data)
+            .map(|s| println!("{}", s))
+            .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
+
+    }
+
+    pub fn event(data: ModuleEvent) {
+        // serialize and send event
+         serde_json::to_string(&data)
+            .map(|s| println!("{}", s))
+            .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
+
+    }
+
+    // pub fn error(data: ErrorEvent) {
+    //     // serialize and send error
+    // }
 }

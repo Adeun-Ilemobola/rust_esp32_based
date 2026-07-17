@@ -1,10 +1,11 @@
 use crate::core::hardware::{sleep_ms, SharedPwm};
-use crate::core::modulecore::{Module, ModuleCore};
+use crate::core::modulecore::{Module, ModuleCore, emit};
+use crate::protocol::command::{ModuleCommand , ServoCommandPayload};
+use crate::protocol::module_event::{ModuleEvent, ServoEvent};
+use crate::protocol::registration::{ModuleType, Registration};
 use crate::utilities::math::{pulse_us_to_tick, range_i32};
 use crate::utilities::moduleconflg::ServoConfig;
-use crate::utilities::serdeprotocol::{
-    EventModeType, ModuleCommand, ModuleType, OutgoingEvent, ServoCommandPayload,
-};
+
 use anyhow::Ok;
 use pwm_pca9685::Channel;
 use serde_json::json;
@@ -20,8 +21,6 @@ pub struct ServoModule<'d> {
     angle: i32,
     min_pivot: i32,
     max_pivot: i32,
-
-    event_mode: EventModeType,
     cluster_id: Option<String>,
 }
 
@@ -43,16 +42,14 @@ impl<'d> ServoModule<'d> {
             min_pivot: config.min_pivot,
             channel: channel.clone(),
             can_serialize: true,
-            event_mode: EventModeType::Register,
             cluster_id: cluster_id.clone(),
         };
+         emit::registration(Registration{
+        id:s.id().to_string(),
+         module_type:ModuleType::Servo,
+         lool_up_id:manuel_id.clone()
+      });
 
-        if cluster_id.is_some() {
-            s.can_serialize = false
-        }
-
-        let _ = s.serialize();
-        s.event_mode = EventModeType::State;
         s.set_offset(s.offset)?;
         s.set_angle(0)?;
        
@@ -79,9 +76,7 @@ impl<'d> ServoModule<'d> {
             .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
             .unwrap();
 
-        if self.can_serialize {
-            let _ = self.serialize();
-        }
+        emit::event(ModuleEvent::Servo(ServoEvent::GetOffset { angle: self.offset.clone() }));
 
         Ok(())
     }
@@ -92,10 +87,10 @@ impl<'d> ServoModule<'d> {
         let raw_rang =
             (self.offset + pivotrang).clamp(self.config.min_angle, self.config.max_angle);
 
-        self.angle = raw_rang.clone();
+         self.angle = raw_rang;
 
         let pulse = range_i32(
-            raw_rang,
+            self.angle.clone(),
             self.config.min_angle,
             self.config.max_angle,
             self.config.pulse_min,
@@ -106,10 +101,8 @@ impl<'d> ServoModule<'d> {
             .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
             .unwrap();
 
-        if self.can_serialize {
-            let _ = self.serialize();
-        }
-
+        emit::event(ModuleEvent::Servo(ServoEvent::GetAngle { angle: pivotrang.clone() } ));
+   
         Ok(())
     }
 
@@ -122,38 +115,17 @@ impl<'d> ServoModule<'d> {
 
     pub fn set_min_pivot(&mut self, min_pivot: i32) {
         self.min_pivot = min_pivot.min(self.max_pivot);
-        if self.can_serialize {
-            let _ = self.serialize();
-        }
+        emit::event(ModuleEvent::Servo(ServoEvent::GetMinPivot { min_pivot }));
+
+       
     }
 
     pub fn set_max_pivot(&mut self, max_pivot: i32) {
         self.max_pivot = max_pivot.max(self.min_pivot);
-        if self.can_serialize {
-            let _ = self.serialize();
-        }
+        emit::event(ModuleEvent::Servo(ServoEvent::GetMaxPivot { max_pivot }));
     }
 
-    pub fn get_event(&self) -> anyhow::Result<OutgoingEvent> {
-        Ok(OutgoingEvent {
-            id: self.id().to_string(),
-            version: "1.0".to_string(),
-            manuel_id: self.core.manuel_id.to_string(),
-
-            kind: self.event_mode.clone(),
-            moduletype: ModuleType::Servo,
-            payload: json!({
-            "config":self.config.clone(),
-                        "offset":self.offset,
-                        "angle": self.angle,
-            "min_pivot":self.min_pivot,
-            "max_pivot":self.max_pivot
-
-                    }),
-            generated_info: None,
-            master_id: self.cluster_id.clone(),
-        })
-    }
+   
 }
 
 impl<'d> Module for ServoModule<'d> {
@@ -185,11 +157,5 @@ impl<'d> Module for ServoModule<'d> {
         Ok(())
     }
 
-    fn serialize(&self) -> anyhow::Result<()> {
-        serde_json::to_string(&self.get_event()?)
-            .map(|s| println!("{}", s))
-            .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
-
-        Ok(())
-    }
+   
 }

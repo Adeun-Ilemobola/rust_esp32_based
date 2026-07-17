@@ -1,9 +1,12 @@
 pub mod core;
 pub mod module;
 pub mod utilities;
+pub mod protocol;
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
-use crate::utilities::serdeprotocol::IncomingCommand;
+use crate::protocol::command::IncomingCommand;
+// use crate::utilities::serdeprotocol::IncomingCommand;
+
 use std::io;
 use std::io::{BufRead, ErrorKind};
 use std::sync::mpsc;

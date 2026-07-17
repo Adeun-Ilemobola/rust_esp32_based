@@ -1,6 +1,8 @@
 use crate::core::hardware::{InputPin, InputPinCore, Pull};
-use crate::core::modulecore::{Module, ModuleCore};
-use crate::utilities::serdeprotocol::{EventModeType, ModuleType, OutgoingEvent};
+use crate::core::modulecore::{Module, ModuleCore, emit};
+use crate::protocol::command::ModuleCommand;
+use crate::protocol::module_event::{ButtonEvent, ModuleEvent};
+use crate::protocol::registration::{ModuleType, Registration};
 use esp_idf_svc::hal::gpio::Level;
 use serde_json::json;
 
@@ -14,27 +16,28 @@ pub struct Buttonmodule<'d> {
     pin_driver: InputPinCore<'d>,
     last_state: Level,
     last_change_time: std::time::Instant,
-    event_mode: EventModeType,
 }
 
 impl<'d> Buttonmodule<'d> {
-    pub fn new<T>(pin: T) -> anyhow::Result<Buttonmodule<'d>>
+    pub fn new<T>(pin: T , lool_up_id:String) -> anyhow::Result<Buttonmodule<'d>>
     where
         T: InputPin + 'd,
     {
-        let mut buttonmodule = Buttonmodule {
-            core: ModuleCore::new(ModuleType::Button, "btu-3434"),
+        let  buttonmodule = Buttonmodule {
+            core: ModuleCore::new(ModuleType::Button, &lool_up_id),
             state: Level::High,
             pin: pin.pin() as u8,
             pin_driver: InputPinCore::new(pin, Pull::Up)?,
             last_state: Level::High,
             last_change_time: std::time::Instant::now(),
             prev_state: Level::High,
-            event_mode: EventModeType::Register,
         };
 
-        let _ = buttonmodule.serialize();
-        buttonmodule.event_mode = EventModeType::State;
+       emit::registration(Registration{
+        id:buttonmodule.id().to_string(),
+        lool_up_id :lool_up_id.clone(),
+        module_type:ModuleType::Button
+       });
 
         Ok(buttonmodule)
     }
@@ -57,25 +60,12 @@ impl<'d> Buttonmodule<'d> {
         if self.state != self.prev_state {
             let pressed = self.state == Level::Low;
             self.prev_state = self.state;
-            self.serialize()?;
+            emit::event(ModuleEvent::Button(ButtonEvent::Ckick));
             return Ok(pressed);
         }
         Ok(false)
     }
-    pub fn get_event(&self) -> anyhow::Result<OutgoingEvent> {
-        Ok(OutgoingEvent {
-            id: self.id().to_string(),
-            manuel_id: self.core.manuel_id.to_string(),
-            version: "1.0".to_string(),
-            kind: self.event_mode.clone(),
-            moduletype: ModuleType::Button,
-            payload: json!({
-               "pressed": self.state == Level::Low
-            }),
-            generated_info: None,
-            master_id: None,
-        })
-    }
+    
 }
 impl<'d> Module for Buttonmodule<'d> {
     fn id(&self) -> &String {
@@ -90,16 +80,16 @@ impl<'d> Module for Buttonmodule<'d> {
     }
     fn handle_command(
         &mut self,
-        _command: &crate::utilities::serdeprotocol::ModuleCommand,
+        _command: &ModuleCommand,
     ) -> anyhow::Result<()> {
         Ok(())
     }
 
-    fn serialize(&self) -> anyhow::Result<()> {
-        serde_json::to_string(&self.get_event()?)
-            .map(|s| println!("{}", s))
-            .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
+    // fn serialize(&self) -> anyhow::Result<()> {
+    //     serde_json::to_string(&self.get_event()?)
+    //         .map(|s| println!("{}", s))
+    //         .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }

@@ -1,9 +1,10 @@
 use crate::core::hardware::{ledc, LedTimer, OutputPin};
-use crate::core::modulecore::{Module, ModuleCore};
+use crate::core::modulecore::{Module, ModuleCore, emit};
+use crate::protocol::command::{ModuleCommand  , LedCommandPayload};
+use crate::protocol::module_event::{LedEvent, ModuleEvent};
+use crate::protocol::registration::{ModuleType, Registration};
 use crate::utilities::math::range_u32;
-use crate::utilities::serdeprotocol::{
-    EventModeType, LedCommandPayload, ModuleCommand, ModuleType, OutgoingEvent,
-};
+
 use serde_json::json;
 
 pub struct Ledmodule<'d> {
@@ -11,8 +12,6 @@ pub struct Ledmodule<'d> {
     state: u32,
     pin: u8,
     pwm: ledc::LedcDriver<'d>,
-    can_serialize: bool,
-    event_mode: EventModeType,
     cluster_id: Option<String>,
 }
 impl<'d> Ledmodule<'d> {
@@ -31,22 +30,21 @@ impl<'d> Ledmodule<'d> {
 
         let pwm = ledc::LedcDriver::new(channel, timer, pin)?;
 
-        let mut ledmodule = Ledmodule {
+        let  ledmodule = Ledmodule {
             core: ModuleCore::new(ModuleType::Led, &manuel_id),
             state: 0,
             pin: pin_number,
             pwm,
-            can_serialize: true,
             cluster_id: cluster_id.clone(),
-            event_mode: EventModeType::Register,
         };
-        if cluster_id.is_some() {
-            ledmodule.can_serialize = false
-        }
+      
 
-        let _ = ledmodule.serialize();
+      emit::registration(Registration{
+        id:ledmodule.id().to_string(),
+         module_type:ModuleType::Led,
+         lool_up_id:manuel_id.clone()
+      });
 
-        ledmodule.event_mode = EventModeType::State;
 
         Ok(ledmodule)
     }
@@ -55,9 +53,8 @@ impl<'d> Ledmodule<'d> {
         let p = range_u32(state, 0, 100, 0, self.pwm.get_max_duty());
         self.pwm.set_duty(p)?;
         self.state = state;
-        if self.can_serialize {
-            let _ = self.serialize();
-        }
+        emit::event(ModuleEvent::Led(LedEvent::Brightness { level: state }));
+    
 
         Ok(())
     }
@@ -73,24 +70,6 @@ impl<'d> Ledmodule<'d> {
         }
 
         Ok(())
-    }
-    pub fn event_mode(&mut self, mode: bool) {
-        self.can_serialize = mode;
-    }
-    pub fn get_event(&self) -> anyhow::Result<OutgoingEvent> {
-        Ok(OutgoingEvent {
-            id: self.id().to_string(),
-            version: "1.0".to_string(),
-            manuel_id: self.core.manuel_id.to_string(),
-
-            kind: self.event_mode.clone(),
-            moduletype: ModuleType::Led,
-            payload: json!({
-                "state": self.state
-            }),
-            generated_info: None,
-            master_id: self.cluster_id.clone(),
-        })
     }
 }
 
@@ -115,14 +94,6 @@ impl<'d> Module for Ledmodule<'d> {
                 // handle anything else
             }
         }
-        Ok(())
-    }
-
-    fn serialize(&self) -> anyhow::Result<()> {
-        serde_json::to_string(&self.get_event()?)
-            .map(|s| println!("{}", s))
-            .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
-
         Ok(())
     }
 }
