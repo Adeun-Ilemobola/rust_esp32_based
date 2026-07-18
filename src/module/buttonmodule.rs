@@ -36,7 +36,8 @@ impl<'d> Buttonmodule<'d> {
        emit::registration(Registration{
         id:buttonmodule.id().to_string(),
         lool_up_id :lool_up_id.clone(),
-        module_type:ModuleType::Button
+        module_type:ModuleType::Button,
+        parent_id:String::new()
        });
 
         Ok(buttonmodule)

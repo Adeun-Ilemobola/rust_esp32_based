@@ -47,7 +47,8 @@ impl<'d> ServoModule<'d> {
          emit::registration(Registration{
         id:s.id().to_string(),
          module_type:ModuleType::Servo,
-         lool_up_id:manuel_id.clone()
+         lool_up_id:manuel_id.clone(),
+          parent_id: cluster_id.clone().unwrap_or_default()
       });
 
         s.set_offset(s.offset)?;

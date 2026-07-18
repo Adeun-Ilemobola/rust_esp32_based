@@ -42,7 +42,9 @@ impl<'d> Ledmodule<'d> {
       emit::registration(Registration{
         id:ledmodule.id().to_string(),
          module_type:ModuleType::Led,
-         lool_up_id:manuel_id.clone()
+         lool_up_id:manuel_id.clone(),
+         parent_id: cluster_id.clone().unwrap_or_default()
+
       });
 
 

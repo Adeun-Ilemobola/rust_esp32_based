@@ -17,6 +17,7 @@ pub struct Registration {
     pub id: String,
     pub module_type: ModuleType,
     pub lool_up_id:String,
+    pub parent_id:String
 }
 
 #[derive(Debug, Serialize ,Clone )]
