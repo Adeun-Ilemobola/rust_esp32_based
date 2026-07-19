@@ -39,6 +39,7 @@ impl<'d> Buttonmodule<'d> {
         module_type:ModuleType::Button,
         parent_id:String::new()
        });
+       
 
         Ok(buttonmodule)
     }
@@ -61,7 +62,7 @@ impl<'d> Buttonmodule<'d> {
         if self.state != self.prev_state {
             let pressed = self.state == Level::Low;
             self.prev_state = self.state;
-            emit::event(ModuleEvent::Button(ButtonEvent::Ckick));
+            emit::event(ModuleEvent::Button(ButtonEvent::Ckick{ id:self.id().clone()}));
             return Ok(pressed);
         }
         Ok(false)

@@ -1,9 +1,10 @@
 pub mod core;
 pub mod module;
-pub mod utilities;
 pub mod protocol;
+pub mod utilities;
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
+use crate::module::lidar::Lidar;
 use crate::protocol::command::IncomingCommand;
 // use crate::utilities::serdeprotocol::IncomingCommand;
 
@@ -13,6 +14,34 @@ use std::sync::mpsc;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 type ModuleHandle<'a> = Rc<RefCell<dyn Module + 'a>>;
+
+fn configure_console_uart() -> anyhow::Result<()> {
+    use esp_idf_svc::sys;
+    use std::ptr;
+
+    unsafe {
+        let uart = sys::uart_port_t_UART_NUM_0;
+
+        if !sys::uart_is_driver_installed(uart) {
+            let result = sys::uart_driver_install(
+                uart,
+                2048, // RX buffer
+                2048, // TX buffer
+                0,    // no event queue
+                ptr::null_mut(),
+                0,
+            );
+
+            if result != sys::ESP_OK {
+                anyhow::bail!("Failed to install UART driver: {}", result);
+            }
+        }
+
+        sys::uart_vfs_dev_use_driver(uart as i32);
+    }
+
+    Ok(())
+}
 
 /// Prints a compact startup report to the serial logger.
 ///
@@ -98,12 +127,19 @@ fn format_bytes(bytes: usize) -> String {
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
+    configure_console_uart()?;
     let mut modules: HashMap<String, ModuleHandle<'_>> = HashMap::new();
     let p = Peripherals::take()?;
 
     let hardware = HardwareContext::new(p.i2c0, p.pins.gpio21, p.pins.gpio22, p.ledc.timer0)?;
-
     print_welcome_message("not initialized", "not initialized");
+
+    let lidar = Rc::new(RefCell::new(Lidar::new(
+        hardware.servo_pwm.clone(),
+        "lidar".to_string(),
+    )?));
+    let lidar_id = lidar.borrow().get_id();
+    modules.insert(lidar_id, lidar.clone());
 
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
     std::thread::spawn(move || {
@@ -111,6 +147,8 @@ fn main() -> anyhow::Result<()> {
     });
 
     loop {
+        lidar.borrow_mut().tick();
+
         // if btu.poll()? {
         //     led_module.borrow_mut().toggle()?
         // }
@@ -118,6 +156,15 @@ fn main() -> anyhow::Result<()> {
         if let Ok(command) = command_receiver.try_recv() {
             if let Some(m) = modules.get_mut(&command.id) {
                 m.borrow_mut().handle_command(&command.command)?;
+            }
+            if let Some(module) = modules.get_mut(&command.id) {
+                module.borrow_mut().handle_command(&command.command)?;
+            } else {
+                log::error!(
+                    "No top-level module found for command id={} command={:?}",
+                    command.id,
+                    command.command
+                );
             }
         }
         sleep_ms(10);

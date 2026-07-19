@@ -77,7 +77,10 @@ impl<'d> ServoModule<'d> {
             .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
             .unwrap();
 
-        emit::event(ModuleEvent::Servo(ServoEvent::GetOffset { angle: self.offset.clone() }));
+        emit::event(ModuleEvent::Servo(ServoEvent::GetOffset { 
+            id:self.id().clone(),
+            angle: self.offset.clone() 
+        }));
 
         Ok(())
     }
@@ -102,7 +105,7 @@ impl<'d> ServoModule<'d> {
             .set_channel_on_off(self.channel, 0, pulse_us_to_tick(pulse))
             .unwrap();
 
-        emit::event(ModuleEvent::Servo(ServoEvent::GetAngle { angle: pivotrang.clone() } ));
+        emit::event(ModuleEvent::Servo(ServoEvent::GetAngle { id:self.id().clone(), angle: pivotrang.clone() } ));
    
         Ok(())
     }
@@ -116,14 +119,14 @@ impl<'d> ServoModule<'d> {
 
     pub fn set_min_pivot(&mut self, min_pivot: i32) {
         self.min_pivot = min_pivot.min(self.max_pivot);
-        emit::event(ModuleEvent::Servo(ServoEvent::GetMinPivot { min_pivot }));
+        emit::event(ModuleEvent::Servo(ServoEvent::GetMinPivot { id:self.id().clone(), min_pivot }));
 
        
     }
 
     pub fn set_max_pivot(&mut self, max_pivot: i32) {
         self.max_pivot = max_pivot.max(self.min_pivot);
-        emit::event(ModuleEvent::Servo(ServoEvent::GetMaxPivot { max_pivot }));
+        emit::event(ModuleEvent::Servo(ServoEvent::GetMaxPivot { id:self.id().clone(), max_pivot }));
     }
 
    

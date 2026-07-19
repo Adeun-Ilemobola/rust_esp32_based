@@ -55,7 +55,7 @@ impl<'d> Ledmodule<'d> {
         let p = range_u32(state, 0, 100, 0, self.pwm.get_max_duty());
         self.pwm.set_duty(p)?;
         self.state = state;
-        emit::event(ModuleEvent::Led(LedEvent::Brightness { level: state }));
+        emit::event(ModuleEvent::Led(LedEvent::Brightness { id:self.id().clone(), level: state }));
     
 
         Ok(())

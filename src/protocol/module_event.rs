@@ -1,6 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize ,Clone )]
+#[derive(Debug, Serialize, Clone)]
 #[serde(tag = "module_type", content = "event")]
 pub enum ModuleEvent {
     Led(LedEvent),
@@ -27,53 +27,57 @@ pub struct SysLogEvent {
     pub priority: LogPriority,
 }
 
-#[derive(Debug, Serialize ,Clone )]
+#[derive(Debug, Serialize, Clone)]
 #[serde(tag = "event_type")]
 // ------ LedEvent-----
 pub enum LedEvent {
-   Brightness{level:u32 }
+    Brightness { id: String, level: u32 },
 }
 
-
 // ------ ServoEvent-----
-#[derive(Debug, Serialize ,Clone )]
+#[derive(Debug, Serialize, Clone)]
 #[serde(tag = "event_type")]
-pub enum  ServoEvent {
-    GetAngle{angle:i32},
-     GetMinPivot { min_pivot: i32 },
-    GetMaxPivot { max_pivot: i32 },
-    GetOffset {angle :i32}
+pub enum ServoEvent {
+    GetAngle { id: String, angle: i32 },
+    GetMinPivot { id: String, min_pivot: i32 },
+    GetMaxPivot { id: String, max_pivot: i32 },
+    GetOffset { id: String, angle: i32 },
 }
 
 // ------ LidarEvent-----
 
-#[derive(Debug, Serialize ,Clone )]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "event_type")]
-pub struct  RangPoint{
-    x:i32,
-    y:i32,
-    distant:u32
+pub struct RangPoint {
+    pub x: i32,
+    pub y: i32,
+    pub distant: u32,
 }
 
-#[derive(Debug, Serialize ,Clone )]
-#[serde(tag = "event_type")]
-pub enum LidarEvent{
-   Roi{
-    id:String,
-    x_min:i32 ,
-    y_min:i32,
-    x_max:i32 ,
-    y_max:i32,
-   },
-   PointMap{id :String , map:Vec<RangPoint>},
-   Target{  x:i32 , y:i32}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
 }
 
-
-#[derive(Debug, Serialize ,Clone )]
-#[serde(tag = "event_type")]
-pub  enum ButtonEvent {
-    Ckick    
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum ScanState {
+    Idol,
+    Scanning,
+    StopScan,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "event_type")]
+pub enum LidarEvent {
+    Roi { id: String, min: Point, max: Point },
+    PointMap { id: String, map: Vec<RangPoint> },
+    Target { id: String, point: Point },
+    ScanState { id: String, state: ScanState },
+}
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "event_type")]
+pub enum ButtonEvent {
+    Ckick { id: String },
+}

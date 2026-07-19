@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::protocol::module_event::Point;
+
 
 
 
@@ -16,6 +18,7 @@ pub enum ModuleCommand {
     Led(LedCommandPayload),
     ClusterLeds(ClusterCommandPayload),
     Servo(ServoCommandPayload),
+    Lidar(LidarCommandPayload)
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,6 +51,22 @@ pub enum ClusterCommandPayload {
 
 // ---- Lidar
 
+#[derive(Debug, Deserialize)]
+#[serde(tag = "command", )]
+pub enum  LidarCommandPayload  {
+    Roi{min:Point , max:Point},
+    StartScan,
+    StopScan,
+    Test,
+    SetStep{ step:u32},
+    ChangeMotorAngle {
+        id: String,
+        step:i32
+    },
+    MovePos{
+        p:Point
+    }    
+}
 
 
 

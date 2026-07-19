@@ -37,11 +37,14 @@ pub trait Module {
 
 
 pub mod emit {
-    use crate::protocol::{module_event::ModuleEvent, registration::Registration};
+    use crate::protocol::{module_event::ModuleEvent, registration::{ProtocolMessage, Registration}};
 
     pub fn registration(data: Registration) {
+
+        
+
         // serialize and send registration
-        serde_json::to_string(&data)
+        serde_json::to_string(&ProtocolMessage::Registration(data))
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 
@@ -49,7 +52,7 @@ pub mod emit {
 
     pub fn event(data: ModuleEvent) {
         // serialize and send event
-         serde_json::to_string(&data)
+         serde_json::to_string(&ProtocolMessage::ModuleEvent(data))
             .map(|s| println!("{}", s))
             .unwrap_or_else(|e| println!("Failed to serialize JSON: {}", e));
 
