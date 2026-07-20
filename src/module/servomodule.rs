@@ -1,10 +1,10 @@
 use crate::core::hardware::{ SharedPwm};
 use crate::core::modulecore::{Module, ModuleCore, emit};
 use crate::protocol::command::{ModuleCommand , ServoCommandPayload};
+use crate::protocol::global_definitions::{ModuleType, ServoCapability};
 use crate::protocol::module_event::{ModuleEvent, ServoEvent};
-use crate::protocol::registration::{ModuleType, Registration};
+use crate::protocol::registration::{ Registration};
 use crate::utilities::math::{pulse_us_to_tick, range_i32};
-use crate::utilities::moduleconflg::ServoConfig;
 
 use anyhow::Ok;
 use pwm_pca9685::Channel;
@@ -12,7 +12,7 @@ use pwm_pca9685::Channel;
 pub struct ServoModule<'d> {
     core: ModuleCore,
     pwm: SharedPwm<'d>,
-    config: ServoConfig,
+    config: ServoCapability,
     channel: Channel,
 
     offset: i32,
@@ -26,7 +26,7 @@ impl<'d> ServoModule<'d> {
         pwm: SharedPwm<'d>,
         manuel_id: String,
         channel: Channel,
-        config: ServoConfig,
+        config: ServoCapability,
         cluster_id: Option<String>,
     ) -> anyhow::Result<ServoModule<'d>> {
         let mut s = ServoModule {

@@ -25,7 +25,6 @@ pub struct OutputPinCore<'d> {
 pub struct InputPinCore<'d> {
     pin_number: u8,
     driver: PinDriver<'d, Input>,
-    mode: Pull,
 }
 
 impl<'d> InputPinCore<'d> {
@@ -39,7 +38,6 @@ impl<'d> InputPinCore<'d> {
         Ok(Self {
             pin_number,
             driver,
-            mode: pull_mode,
         })
     }
     pub fn pin_number(&self) -> u8 {

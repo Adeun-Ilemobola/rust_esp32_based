@@ -1,10 +1,10 @@
 use crate::core::hardware::{InputPin, InputPinCore, Pull};
 use crate::core::modulecore::{Module, ModuleCore, emit};
 use crate::protocol::command::ModuleCommand;
+use crate::protocol::global_definitions::ModuleType;
 use crate::protocol::module_event::{ButtonEvent, ModuleEvent};
-use crate::protocol::registration::{ModuleType, Registration};
+use crate::protocol::registration::{ Registration};
 use esp_idf_svc::hal::gpio::Level;
-use serde_json::json;
 
 static BUTTON_MODULE_MAX_TIME: u64 = 150; // Maximum time in milliseconds to consider a button press valid
 
@@ -12,7 +12,6 @@ pub struct Buttonmodule<'d> {
     core: ModuleCore,
     state: Level,      // debounced/committed level
     prev_state: Level, // previous committed level, for edge detection
-    pin: u8,
     pin_driver: InputPinCore<'d>,
     last_state: Level,
     last_change_time: std::time::Instant,
@@ -26,7 +25,6 @@ impl<'d> Buttonmodule<'d> {
         let  buttonmodule = Buttonmodule {
             core: ModuleCore::new(ModuleType::Button, &lool_up_id),
             state: Level::High,
-            pin: pin.pin() as u8,
             pin_driver: InputPinCore::new(pin, Pull::Up)?,
             last_state: Level::High,
             last_change_time: std::time::Instant::now(),

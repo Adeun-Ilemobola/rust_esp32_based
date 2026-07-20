@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::protocol::{command::ModuleCommand, registration::ModuleType};
+use crate::protocol::{command::ModuleCommand, global_definitions::ModuleType};
 
 #[derive(Debug, Clone)]
 pub struct ModuleCore {

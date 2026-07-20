@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::protocol::command::RangefinderDistanceMode;
+use crate::protocol::{command::RangefinderDistanceMode, global_definitions::{Point, RangPoint}};
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "module_type", content = "event")]
@@ -48,19 +48,7 @@ pub enum ServoEvent {
 
 // ------ LidarEvent-----
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "event_type")]
-pub struct RangPoint {
-    pub x: i32,
-    pub y: i32,
-    pub distant: u32,
-}
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Point {
-    pub x: i32,
-    pub y: i32,
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum ScanState {

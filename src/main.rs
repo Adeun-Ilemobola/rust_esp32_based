@@ -7,7 +7,6 @@ use embedded_hal_bus::i2c::RcDevice;
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
 use crate::module::lidar::Lidar;
-use crate::module::range_finder::Rangefinder;
 use crate::protocol::command::IncomingCommand;
 // use crate::utilities::serdeprotocol::IncomingCommand;
 
@@ -49,83 +48,83 @@ fn configure_console_uart() -> anyhow::Result<()> {
 /// Prints a compact startup report to the serial logger.
 ///
 /// Update the Wi-Fi and Bluetooth values when those services are initialized.
-fn print_welcome_message(wifi_status: &str, bluetooth_status: &str) {
-    use esp_idf_svc::sys;
+// fn print_welcome_message(wifi_status: &str, bluetooth_status: &str) {
+//     use esp_idf_svc::sys;
 
-    // These values come directly from ESP-IDF after the hardware has initialized.
-    let (total_ram, free_ram, minimum_free_ram, flash_size) = unsafe {
-        let total_ram = sys::heap_caps_get_total_size(sys::MALLOC_CAP_8BIT);
-        let free_ram = sys::esp_get_free_heap_size() as usize;
-        let minimum_free_ram = sys::esp_get_minimum_free_heap_size() as usize;
+//     // These values come directly from ESP-IDF after the hardware has initialized.
+//     let (total_ram, free_ram, minimum_free_ram, flash_size) = unsafe {
+//         let total_ram = sys::heap_caps_get_total_size(sys::MALLOC_CAP_8BIT);
+//         let free_ram = sys::esp_get_free_heap_size() as usize;
+//         let minimum_free_ram = sys::esp_get_minimum_free_heap_size() as usize;
 
-        let mut flash_size = 0_u32;
-        let flash_result =
-            sys::esp_flash_get_physical_size(sys::esp_flash_default_chip, &mut flash_size);
+//         let mut flash_size = 0_u32;
+//         let flash_result =
+//             sys::esp_flash_get_physical_size(sys::esp_flash_default_chip, &mut flash_size);
 
-        (
-            total_ram,
-            free_ram,
-            minimum_free_ram,
-            (flash_result == sys::ESP_OK).then_some(flash_size as usize),
-        )
-    };
+//         (
+//             total_ram,
+//             free_ram,
+//             minimum_free_ram,
+//             (flash_result == sys::ESP_OK).then_some(flash_size as usize),
+//         )
+//     };
 
-    let used_ram = total_ram.saturating_sub(free_ram);
-    let ram_usage = if total_ram == 0 {
-        0.0
-    } else {
-        used_ram as f64 * 100.0 / total_ram as f64
-    };
+//     let used_ram = total_ram.saturating_sub(free_ram);
+//     let ram_usage = if total_ram == 0 {
+//         0.0
+//     } else {
+//         used_ram as f64 * 100.0 / total_ram as f64
+//     };
 
-    log::info!("==================================================");
-    log::info!("Welcome! Your ESP32 is up and running.");
-    log::info!(
-        "Firmware: {} v{}",
-        env!("CARGO_PKG_NAME"),
-        env!("CARGO_PKG_VERSION")
-    );
-    log::info!(
-        "ESP-IDF: {}.{}.{}",
-        sys::ESP_IDF_VERSION_MAJOR,
-        sys::ESP_IDF_VERSION_MINOR,
-        sys::ESP_IDF_VERSION_PATCH
-    );
-    match flash_size {
-        Some(bytes) => log::info!("Flash storage: {}", format_bytes(bytes)),
-        None => log::warn!("Flash storage: unavailable"),
-    }
-    log::info!(
-        "RAM: {} free / {} total ({:.1}% used)",
-        format_bytes(free_ram),
-        format_bytes(total_ram),
-        ram_usage
-    );
-    log::info!(
-        "Lowest free RAM since boot: {}",
-        format_bytes(minimum_free_ram)
-    );
-    log::info!("Wi-Fi: {}", wifi_status);
-    log::info!("Bluetooth: {}", bluetooth_status);
-    log::info!("System status: ready");
-    log::info!("==================================================");
-}
+//     log::info!("==================================================");
+//     log::info!("Welcome! Your ESP32 is up and running.");
+//     log::info!(
+//         "Firmware: {} v{}",
+//         env!("CARGO_PKG_NAME"),
+//         env!("CARGO_PKG_VERSION")
+//     );
+//     log::info!(
+//         "ESP-IDF: {}.{}.{}",
+//         sys::ESP_IDF_VERSION_MAJOR,
+//         sys::ESP_IDF_VERSION_MINOR,
+//         sys::ESP_IDF_VERSION_PATCH
+//     );
+//     match flash_size {
+//         Some(bytes) => log::info!("Flash storage: {}", format_bytes(bytes)),
+//         None => log::warn!("Flash storage: unavailable"),
+//     }
+//     log::info!(
+//         "RAM: {} free / {} total ({:.1}% used)",
+//         format_bytes(free_ram),
+//         format_bytes(total_ram),
+//         ram_usage
+//     );
+//     log::info!(
+//         "Lowest free RAM since boot: {}",
+//         format_bytes(minimum_free_ram)
+//     );
+//     log::info!("Wi-Fi: {}", wifi_status);
+//     log::info!("Bluetooth: {}", bluetooth_status);
+//     log::info!("System status: ready");
+//     log::info!("==================================================");
+// }
 
-fn format_bytes(bytes: usize) -> String {
-    const KIB: f64 = 1024.0;
-    const MIB: f64 = KIB * 1024.0;
-    const GIB: f64 = MIB * 1024.0;
+// fn format_bytes(bytes: usize) -> String {
+//     const KIB: f64 = 1024.0;
+//     const MIB: f64 = KIB * 1024.0;
+//     const GIB: f64 = MIB * 1024.0;
 
-    let bytes = bytes as f64;
-    if bytes >= GIB {
-        format!("{:.2} GiB", bytes / GIB)
-    } else if bytes >= MIB {
-        format!("{:.2} MiB", bytes / MIB)
-    } else if bytes >= KIB {
-        format!("{:.2} KiB", bytes / KIB)
-    } else {
-        format!("{} B", bytes as usize)
-    }
-}
+//     let bytes = bytes as f64;
+//     if bytes >= GIB {
+//         format!("{:.2} GiB", bytes / GIB)
+//     } else if bytes >= MIB {
+//         format!("{:.2} MiB", bytes / MIB)
+//     } else if bytes >= KIB {
+//         format!("{:.2} KiB", bytes / KIB)
+//     } else {
+//         format!("{} B", bytes as usize)
+//     }
+// }
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -163,7 +162,7 @@ fn main() -> anyhow::Result<()> {
         rangefinder_i2c
     )?));
     let lidar_id = lidar.borrow().get_id();
-    // modules.insert(lidar_id, lidar.clone());
+    modules.insert(lidar_id, lidar.clone());
 
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
     std::thread::spawn(move || {

@@ -1,6 +1,7 @@
 use serde::{Deserialize , Serialize};
 
-use crate::protocol::module_event::Point;
+use crate::protocol::global_definitions::Point;
+
 
 
 

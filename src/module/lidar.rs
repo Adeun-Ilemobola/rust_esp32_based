@@ -3,17 +3,17 @@ use crate::core::modulecore::emit;
 use crate::module::range_finder::Rangefinder;
 use crate::module::servomodule::ServoModule;
 use crate::protocol::command::{LidarCommandPayload, ModuleCommand};
+use crate::protocol::global_definitions::{ModuleType, Point, ServoCapability};
 use crate::protocol::module_event::{
-    LidarEvent, LogPriority, ModuleEvent, Point, ScanState, SysLogEvent,
+    LidarEvent, LogPriority, ModuleEvent, ScanState, SysLogEvent,
 };
-use crate::protocol::registration::{ModuleType, Registration};
+use crate::protocol::registration::{ Registration};
 use crate::utilities::logger::SysLog;
 use crate::{
     core::{
         hardware::SharedPwm,
         modulecore::{Module, ModuleCore},
     },
-    utilities::moduleconflg::ServoConfig,
 };
 use embedded_hal_bus::i2c::RcDevice;
 use embedded_hal_compat::ReverseCompat;
@@ -44,7 +44,7 @@ impl<'d> Lidar<'d> {
         rangefinder_i2c: RcDevice<I2cDriver<'d>>,
     ) -> anyhow::Result<Lidar<'d>> {
         let mc = ModuleCore::new(ModuleType::Lidar, &manuel_id);
-        let config = ServoConfig {
+        let config = ServoCapability {
             max_angle: 180,
             min_angle: 0,
             offset: 90,

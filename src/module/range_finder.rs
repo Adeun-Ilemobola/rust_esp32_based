@@ -5,11 +5,12 @@ use crate::core::modulecore::{emit, Module, ModuleCore};
 use crate::protocol::command::{
     ModuleCommand, RangefinderCommandPayload, RangefinderDistanceMode,
 };
+use crate::protocol::global_definitions::ModuleType;
 use crate::protocol::module_event::{
     ModuleEvent, RangefinderEvent,
 };
 use crate::protocol::registration::{
-    ModuleType, Registration,
+     Registration,
 };
 
 use vl53l1x_uld::{

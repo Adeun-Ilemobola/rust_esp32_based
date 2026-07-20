@@ -1,19 +1,10 @@
-use serde::{Deserialize, Serialize};
+use serde::{ Serialize , Deserialize};
 
-use crate::protocol::module_event::ModuleEvent;
+use crate::protocol::{global_definitions::ModuleType, module_event::ModuleEvent};
 
-#[derive(Debug, Serialize , Deserialize ,Clone )]
-pub enum ModuleType {
-    Servo,
-    Led,
-    Imu,
-    LedCluster,
-    Button,
-    Lidar,
-    Rangefinder,
-     SysLog
-}
-#[derive(Debug, Serialize ,Clone )]
+
+// global_definitions
+#[derive(Debug, Serialize  , Deserialize,Clone )]
 pub struct Registration {
     pub id: String,
     pub module_type: ModuleType,
@@ -21,17 +12,6 @@ pub struct Registration {
     pub parent_id:String
 }
 
-#[derive(Debug, Serialize ,Clone )]
-pub struct   ServoCapability{
-    pub max_angle: i32,
-    pub min_angle: i32,
-    pub offset: i32,
-    pub min_pivot: i32,
-    pub max_pivot: i32,
-    pub pulse_min:i32,
-    pub pulse_max:i32,
-
-}
 
 
 

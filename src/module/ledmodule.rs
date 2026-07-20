@@ -1,18 +1,16 @@
 use crate::core::hardware::{ledc, LedTimer, OutputPin};
 use crate::core::modulecore::{Module, ModuleCore, emit};
 use crate::protocol::command::{ModuleCommand  , LedCommandPayload};
+use crate::protocol::global_definitions::ModuleType;
 use crate::protocol::module_event::{LedEvent, ModuleEvent};
-use crate::protocol::registration::{ModuleType, Registration};
+use crate::protocol::registration::{ Registration};
 use crate::utilities::math::range_u32;
 
-use serde_json::json;
 
 pub struct Ledmodule<'d> {
     core: ModuleCore,
     state: u32,
-    pin: u8,
     pwm: ledc::LedcDriver<'d>,
-    cluster_id: Option<String>,
 }
 impl<'d> Ledmodule<'d> {
     pub fn new<T, C>(
@@ -26,19 +24,14 @@ impl<'d> Ledmodule<'d> {
         T: OutputPin + 'd,
         C: ledc::LedcChannel<SpeedMode = ledc::LowSpeed> + 'd,
     {
-        let pin_number = pin.pin() as u8;
-
         let pwm = ledc::LedcDriver::new(channel, timer, pin)?;
 
         let  ledmodule = Ledmodule {
             core: ModuleCore::new(ModuleType::Led, &manuel_id),
             state: 0,
-            pin: pin_number,
             pwm,
-            cluster_id: cluster_id.clone(),
         };
       
-
       emit::registration(Registration{
         id:ledmodule.id().to_string(),
          module_type:ModuleType::Led,
