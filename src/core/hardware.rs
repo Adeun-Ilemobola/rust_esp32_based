@@ -2,7 +2,7 @@ use anyhow::Ok;
 pub use esp_idf_svc::hal::delay::FreeRtos;
 pub use esp_idf_svc::hal::gpio::*;
 pub use esp_idf_svc::hal::i2c;
-pub use esp_idf_svc::hal::i2c::{I2c, I2cConfig, I2cDriver};
+pub use esp_idf_svc::hal::i2c::{I2c, I2cConfig, I2cDriver };
 pub use esp_idf_svc::hal::ledc;
 use esp_idf_svc::hal::ledc::config::TimerConfig;
 use esp_idf_svc::hal::ledc::Resolution;
@@ -11,6 +11,9 @@ pub use esp_idf_svc::hal::uart::UartDriver;
 pub use esp_idf_svc::hal::units::*;
 pub use esp_idf_svc::partition::*;
 use pwm_pca9685::{Address, Pca9685};
+use embedded_hal_bus::i2c::RcDevice;
+use embedded_hal_compat::Reverse;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
@@ -91,68 +94,63 @@ pub fn sleep_ms(ms: u64) {
     std::thread::sleep(Duration::from_millis(ms));
 }
 
-pub type SharedPwm<'d> = Rc<RefCell<Pca9685<I2cDriver<'d>>>>;
+
+pub type I2cBus<'d> = Rc<RefCell<I2cDriver<'d>>>;
+pub type SharedI2cDevice<'d> = RcDevice<I2cDriver<'d>>;
+
+pub type RangefinderI2c<'d> =
+    Reverse<RcDevice<I2cDriver<'d>>>;
+
+pub type SharedPwm<'d> =Rc<RefCell<Pca9685<SharedI2cDevice<'d>>>>;
+
 pub type LedTimer<'d> = ledc::LedcTimerDriver<'d, ledc::LowSpeed>;
 
 pub struct HardwareContext<'d> {
-    pub servo_pwm: SharedPwm<'d>,
+     pub servo_pwm: SharedPwm<'d>,
     pub led_timer: LedTimer<'d>,
+    pub i2c_bus: I2cBus<'d>,
+  
+   
 }
 
 impl<'d> HardwareContext<'d> {
-    pub fn new<I2C, SDA, SCL, TIMER>(
-        i2c: I2C,
-        sda: SDA,
-        scl: SCL,
-        timer: TIMER,
-    ) -> anyhow::Result<HardwareContext<'d>>
-    where
-        I2C: I2c + 'd,
-        SDA: InputPin + OutputPin + 'd,
-        SCL: InputPin + OutputPin + 'd,
-        TIMER: ledc::LedcTimer<SpeedMode = ledc::LowSpeed> + 'd,
-    {
-        Ok(Self {
-            servo_pwm: Self::create_shared_pwm(i2c, sda, scl)?,
-            led_timer: Self::create_led_timer(timer)?,
-        })
-    }
-    pub fn create_shared_pwm<I2C, SDA, SCL>(
-        i2c: I2C,
-        sda: SDA,
-        scl: SCL,
-    ) -> anyhow::Result<SharedPwm<'d>>
-    where
-        I2C: I2c + 'd,
-        SDA: InputPin + OutputPin + 'd,
-        SCL: InputPin + OutputPin + 'd,
-    {
-        let i2c_config = I2cConfig::new().baudrate(400.kHz().into());
-        let i2c = I2cDriver::new(i2c, sda, scl, &i2c_config)?;
+    pub fn new<TIMER>(
+    timer: TIMER,
+    i2c_bus: I2cBus<'d>,
+) -> anyhow::Result<HardwareContext<'d>>
+where
+    TIMER: ledc::LedcTimer<SpeedMode = ledc::LowSpeed> + 'd,
+{
+    Ok(Self {
+        servo_pwm: Self::create_shared_pwm(i2c_bus.clone())?,
+        led_timer: Self::create_led_timer(timer)?,
+         i2c_bus,
+     
+    })
+}
 
-        let mut pwm = Pca9685::new(i2c, Address::default())
-            .map_err(|e| anyhow::anyhow!("pca9685 init: {:?}", e))?;
-        pwm.set_prescale(100)
-            .map_err(|e| anyhow::anyhow!("set_prescale: {:?}", e))?;
-        pwm.enable()
-            .map_err(|e| anyhow::anyhow!("enable: {:?}", e))?;
 
-        Ok(Rc::new(RefCell::new(pwm)))
-    }
+    pub fn create_shared_pwm(
+    i2c_bus: I2cBus<'d>,
+) -> anyhow::Result<SharedPwm<'d>> {
+    let i2c_device = RcDevice::new(i2c_bus);
 
-    // pub fn create_i2c<I2C ,SDA, SCL>(i2c: I2C, sda: SDA, scl: SCL,)-> anyhow::Result<I2cDriver<'d>>
-    // where
-    //  I2C: I2c + 'd,
-    //     SDA: InputPin + OutputPin + 'd,
-    //     SCL: InputPin + OutputPin + 'd,
-    // {
-    //      let i2c_config = I2cConfig::new().baudrate(400.kHz().into());
-    //      let i2c = I2cDriver::new(i2c, sda, scl, &i2c_config)?;
+    let mut pwm = Pca9685::new(
+        i2c_device,
+        Address::default(),
+    )
+    .map_err(|e| anyhow::anyhow!("PCA9685 init: {:?}", e))?;
 
-    //      ok(i2c)
+    pwm.set_prescale(100)
+        .map_err(|e| anyhow::anyhow!("set_prescale: {:?}", e))?;
 
-    // }
+    pwm.enable()
+        .map_err(|e| anyhow::anyhow!("enable: {:?}", e))?;
 
+    Ok(Rc::new(RefCell::new(pwm)))
+}
+   
+   
     pub fn create_led_timer<T>(timer: T) -> anyhow::Result<LedTimer<'d>>
     where
         T: ledc::LedcTimer<SpeedMode = ledc::LowSpeed> + 'd,

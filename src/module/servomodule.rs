@@ -1,4 +1,4 @@
-use crate::core::hardware::{sleep_ms, SharedPwm};
+use crate::core::hardware::{ SharedPwm};
 use crate::core::modulecore::{Module, ModuleCore, emit};
 use crate::protocol::command::{ModuleCommand , ServoCommandPayload};
 use crate::protocol::module_event::{ModuleEvent, ServoEvent};
@@ -8,20 +8,17 @@ use crate::utilities::moduleconflg::ServoConfig;
 
 use anyhow::Ok;
 use pwm_pca9685::Channel;
-use serde_json::json;
 
 pub struct ServoModule<'d> {
     core: ModuleCore,
     pwm: SharedPwm<'d>,
     config: ServoConfig,
     channel: Channel,
-    can_serialize: bool,
 
     offset: i32,
     angle: i32,
     min_pivot: i32,
     max_pivot: i32,
-    cluster_id: Option<String>,
 }
 
 impl<'d> ServoModule<'d> {
@@ -41,8 +38,6 @@ impl<'d> ServoModule<'d> {
             max_pivot: config.max_pivot,
             min_pivot: config.min_pivot,
             channel: channel.clone(),
-            can_serialize: true,
-            cluster_id: cluster_id.clone(),
         };
          emit::registration(Registration{
         id:s.id().to_string(),

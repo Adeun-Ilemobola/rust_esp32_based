@@ -2,6 +2,8 @@ pub mod core;
 pub mod module;
 pub mod protocol;
 pub mod utilities;
+use embedded_hal_bus::i2c::RcDevice;
+
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
 use crate::module::lidar::Lidar;
@@ -125,35 +127,43 @@ fn format_bytes(bytes: usize) -> String {
     }
 }
 
-
-
-
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
     configure_console_uart()?;
     let mut modules: HashMap<String, ModuleHandle<'_>> = HashMap::new();
     let p = Peripherals::take()?;
-
-    // let hardware = HardwareContext::new(p.i2c0, p.pins.gpio21, p.pins.gpio22, p.ledc.timer0)?;
-    let rangefinder = Rc::new(RefCell::new(Rangefinder::new(
-        p.i2c1,
+    let i2c = I2cDriver::new(
+        p.i2c0,
         p.pins.gpio21,
         p.pins.gpio22,
-        "rangefinder".to_string(),
-        None,
-    )?));
-    let rangefinder_id = rangefinder.borrow().id().clone();
-    modules.insert(rangefinder_id, rangefinder.clone());
+        &I2cConfig::new().baudrate(400.kHz().into()),
+    )?;
+
+    let shared_i2c = Rc::new(RefCell::new(i2c));
+    
+
+    let hardware = HardwareContext::new(p.ledc.timer0,shared_i2c.clone())?;
+    let rangefinder_i2c = RcDevice::new(hardware.i2c_bus.clone());
+
+    // let rangefinder = Rc::new(RefCell::new(Rangefinder::new(
+    //     p.i2c1,
+    //     p.pins.gpio21,
+    //     p.pins.gpio22,
+    //     "rangefinder".to_string(),
+    //     None,
+    // )?));
+    // let rangefinder_id = rangefinder.borrow().id().clone();
+    // modules.insert(rangefinder_id, rangefinder.clone());
     // print_welcome_message("not initialized", "not initialized");
 
-    // let lidar = Rc::new(RefCell::new(Lidar::new(
-    //     hardware.servo_pwm.clone(),
-    //     "lidar".to_string(),
-    // )?));
-    // let lidar_id = lidar.borrow().get_id();
+    let lidar = Rc::new(RefCell::new(Lidar::new(
+        hardware.servo_pwm.clone(),
+        "lidar".to_string(),
+        rangefinder_i2c
+    )?));
+    let lidar_id = lidar.borrow().get_id();
     // modules.insert(lidar_id, lidar.clone());
-
 
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
     std::thread::spawn(move || {
@@ -161,8 +171,8 @@ fn main() -> anyhow::Result<()> {
     });
 
     loop {
-        rangefinder.borrow_mut().tick();
-        // lidar.borrow_mut().tick();
+        // rangefinder.borrow_mut().tick();
+        lidar.borrow_mut().tick();
 
         // if btu.poll()? {
         //     led_module.borrow_mut().toggle()?

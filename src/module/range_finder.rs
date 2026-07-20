@@ -1,5 +1,5 @@
 use crate::core::hardware::{
-    I2c, I2cConfig, I2cDriver, InputPin, OutputPin,
+     RangefinderI2c,
 };
 use crate::core::modulecore::{emit, Module, ModuleCore};
 use crate::protocol::command::{
@@ -12,7 +12,6 @@ use crate::protocol::registration::{
     ModuleType, Registration,
 };
 
-use esp_idf_svc::hal::units::*;
 use vl53l1x_uld::{
     DistanceMode,
     IOVoltage,
@@ -23,7 +22,7 @@ use vl53l1x_uld::{
 
 pub struct Rangefinder<'d> {
     pub core: ModuleCore,
-    pub sensor: VL53L1X<I2cDriver<'d>>,
+    pub sensor: VL53L1X<RangefinderI2c<'d>>,
 
     pub range_mm: u16,
     pub is_ranging: bool,
@@ -33,26 +32,15 @@ pub struct Rangefinder<'d> {
 }
 
 impl<'d> Rangefinder<'d> {
-    pub fn new<I2C, SDA, SCL>(
-        i2c: I2C,
-        sda: SDA,
-        scl: SCL,
+    pub fn new(
+         rangefinder_i2c: RangefinderI2c<'d>,
         manual_id: String,
         cluster_id: Option<String>,
-    ) -> anyhow::Result<Self>
-    where
-        I2C: I2c + 'd,
-        SDA: InputPin + OutputPin + 'd,
-        SCL: InputPin + OutputPin + 'd,
-    {
-        let i2c_config =
-            I2cConfig::new().baudrate(400.kHz().into());
-
-        let i2c_driver =
-            I2cDriver::new(i2c, sda, scl, &i2c_config)?;
-
+    ) -> anyhow::Result<Rangefinder<'d>>
+   {
+    
         let mut sensor =
-            VL53L1X::new(i2c_driver, DEFAULT_ADDRESS);
+            VL53L1X::new(rangefinder_i2c, DEFAULT_ADDRESS);
 
         let sensor_id = sensor
             .get_sensor_id()
@@ -170,7 +158,7 @@ impl<'d> Rangefinder<'d> {
         ));
     }
 
-    fn start_ranging(&mut self) -> anyhow::Result<()> {
+    pub fn start_ranging(&mut self) -> anyhow::Result<()> {
         if self.is_ranging {
             return Ok(());
         }

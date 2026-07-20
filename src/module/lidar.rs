@@ -1,8 +1,6 @@
-use pwm_pca9685::Channel;
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-
+use crate::core::hardware::I2cDriver;
 use crate::core::modulecore::emit;
+use crate::module::range_finder::Rangefinder;
 use crate::module::servomodule::ServoModule;
 use crate::protocol::command::{LidarCommandPayload, ModuleCommand};
 use crate::protocol::module_event::{
@@ -17,12 +15,16 @@ use crate::{
     },
     utilities::moduleconflg::ServoConfig,
 };
+use embedded_hal_bus::i2c::RcDevice;
+use embedded_hal_compat::ReverseCompat;
+use pwm_pca9685::Channel;
 
 pub struct Lidar<'d> {
     core: ModuleCore,
 
     servo_x: ServoModule<'d>,
     servo_y: ServoModule<'d>,
+    rangefinder: Rangefinder<'d>,
 
     min_point: Point,
     max_point: Point,
@@ -36,7 +38,11 @@ pub struct Lidar<'d> {
 }
 
 impl<'d> Lidar<'d> {
-    pub fn new(pwm: SharedPwm<'d>, manuel_id: String) -> anyhow::Result<Lidar<'d>> {
+    pub fn new(
+        pwm: SharedPwm<'d>,
+        manuel_id: String,
+        rangefinder_i2c: RcDevice<I2cDriver<'d>>,
+    ) -> anyhow::Result<Lidar<'d>> {
         let mc = ModuleCore::new(ModuleType::Lidar, &manuel_id);
         let config = ServoConfig {
             max_angle: 180,
@@ -63,6 +69,23 @@ impl<'d> Lidar<'d> {
             config.clone(),
             Some(mc.get_id().to_string()),
         )?;
+
+        let mut rangefinder = Rangefinder::new(
+            rangefinder_i2c.reverse(),
+            "rangefinder".to_string(),
+            Some(mc.get_id().to_string()),
+        )?;
+        match rangefinder.start_ranging() {
+            Ok(_) => {}
+            Err(err) => {
+                emit::event(ModuleEvent::SysLog(SysLogEvent {
+                    text: format!("start_ranging in lidar : {:?}",err),
+                    raw_err: None,
+                    priority: LogPriority::High,
+                }));
+            }
+        }
+
         let mut new_lidar = Lidar {
             core: mc,
             servo_x,
@@ -75,6 +98,7 @@ impl<'d> Lidar<'d> {
             x_d: 1,
             limit_point: Point { x: -90, y: 90 },
             scan_time: None,
+            rangefinder,
         };
         emit::registration(Registration {
             id: new_lidar.id().clone(),
@@ -100,6 +124,7 @@ impl<'d> Lidar<'d> {
     }
 
     pub fn tick(&mut self) {
+        self.rangefinder.tick();
         if self.curr_scan_mode == ScanState::Scanning {
             let mut next_point = Point {
                 x: self.curr_point.x + (self.step as i32 * self.x_d),
