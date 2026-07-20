@@ -5,6 +5,7 @@ pub mod utilities;
 use crate::core::hardware::*;
 use crate::core::modulecore::Module;
 use crate::module::lidar::Lidar;
+use crate::module::range_finder::Rangefinder;
 use crate::protocol::command::IncomingCommand;
 // use crate::utilities::serdeprotocol::IncomingCommand;
 
@@ -124,6 +125,9 @@ fn format_bytes(bytes: usize) -> String {
     }
 }
 
+
+
+
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
@@ -131,15 +135,25 @@ fn main() -> anyhow::Result<()> {
     let mut modules: HashMap<String, ModuleHandle<'_>> = HashMap::new();
     let p = Peripherals::take()?;
 
-    let hardware = HardwareContext::new(p.i2c0, p.pins.gpio21, p.pins.gpio22, p.ledc.timer0)?;
-    print_welcome_message("not initialized", "not initialized");
-
-    let lidar = Rc::new(RefCell::new(Lidar::new(
-        hardware.servo_pwm.clone(),
-        "lidar".to_string(),
+    // let hardware = HardwareContext::new(p.i2c0, p.pins.gpio21, p.pins.gpio22, p.ledc.timer0)?;
+    let rangefinder = Rc::new(RefCell::new(Rangefinder::new(
+        p.i2c1,
+        p.pins.gpio21,
+        p.pins.gpio22,
+        "rangefinder".to_string(),
+        None,
     )?));
-    let lidar_id = lidar.borrow().get_id();
-    modules.insert(lidar_id, lidar.clone());
+    let rangefinder_id = rangefinder.borrow().id().clone();
+    modules.insert(rangefinder_id, rangefinder.clone());
+    // print_welcome_message("not initialized", "not initialized");
+
+    // let lidar = Rc::new(RefCell::new(Lidar::new(
+    //     hardware.servo_pwm.clone(),
+    //     "lidar".to_string(),
+    // )?));
+    // let lidar_id = lidar.borrow().get_id();
+    // modules.insert(lidar_id, lidar.clone());
+
 
     let (command_sender, command_receiver) = mpsc::channel::<IncomingCommand>();
     std::thread::spawn(move || {
@@ -147,16 +161,14 @@ fn main() -> anyhow::Result<()> {
     });
 
     loop {
-        lidar.borrow_mut().tick();
+        rangefinder.borrow_mut().tick();
+        // lidar.borrow_mut().tick();
 
         // if btu.poll()? {
         //     led_module.borrow_mut().toggle()?
         // }
 
         if let Ok(command) = command_receiver.try_recv() {
-            if let Some(m) = modules.get_mut(&command.id) {
-                m.borrow_mut().handle_command(&command.command)?;
-            }
             if let Some(module) = modules.get_mut(&command.id) {
                 module.borrow_mut().handle_command(&command.command)?;
             } else {

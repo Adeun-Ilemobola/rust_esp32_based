@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize , Serialize};
 
 use crate::protocol::module_event::Point;
 
@@ -18,7 +18,8 @@ pub enum ModuleCommand {
     Led(LedCommandPayload),
     ClusterLeds(ClusterCommandPayload),
     Servo(ServoCommandPayload),
-    Lidar(LidarCommandPayload)
+    Lidar(LidarCommandPayload),
+    Rangefinder(RangefinderCommandPayload)
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,6 +67,29 @@ pub enum  LidarCommandPayload  {
     MovePos{
         p:Point
     }    
+}
+
+
+#[derive(Debug, Deserialize,Serialize , Clone)]
+pub enum RangefinderDistanceMode {
+    Short,
+    Long,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "command")]
+pub enum RangefinderCommandPayload {
+    StartRanging,
+    StopRanging,
+
+    SetTimingBudget {
+        milliseconds: u16,
+    },
+
+
+    SetDistanceMode {
+        mode: RangefinderDistanceMode,
+    },
 }
 
 

@@ -1,4 +1,3 @@
-
 use pwm_pca9685::Channel;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -6,7 +5,9 @@ use serde_json::json;
 use crate::core::modulecore::emit;
 use crate::module::servomodule::ServoModule;
 use crate::protocol::command::{LidarCommandPayload, ModuleCommand};
-use crate::protocol::module_event::{LidarEvent, LogPriority, ModuleEvent, Point, ScanState, SysLogEvent};
+use crate::protocol::module_event::{
+    LidarEvent, LogPriority, ModuleEvent, Point, ScanState, SysLogEvent,
+};
 use crate::protocol::registration::{ModuleType, Registration};
 use crate::utilities::logger::SysLog;
 use crate::{
@@ -14,11 +15,8 @@ use crate::{
         hardware::SharedPwm,
         modulecore::{Module, ModuleCore},
     },
-    utilities::{
-        moduleconflg::ServoConfig,
-    },
+    utilities::moduleconflg::ServoConfig,
 };
-
 
 pub struct Lidar<'d> {
     core: ModuleCore,
@@ -49,7 +47,7 @@ impl<'d> Lidar<'d> {
             pulse_max: 2500,
             pulse_min: 500,
         };
-        
+
         let servo_x = ServoModule::new(
             pwm.clone(),
             "servo_x".to_string(),
@@ -69,8 +67,8 @@ impl<'d> Lidar<'d> {
             core: mc,
             servo_x,
             servo_y,
-            min_point: Point { x: -90, y: 90 },
-            max_point: Point { x: 90, y: 65 },
+            min_point: Point { x: 90, y: -90 },
+            max_point: Point { x: -90, y: 90 },
             curr_point: Point { x: 0, y: 0 },
             step: 1,
             curr_scan_mode: ScanState::Idol,
@@ -78,11 +76,11 @@ impl<'d> Lidar<'d> {
             limit_point: Point { x: -90, y: 90 },
             scan_time: None,
         };
-        emit::registration(Registration{
+        emit::registration(Registration {
             id: new_lidar.id().clone(),
-            lool_up_id:manuel_id.clone(),
-            module_type:ModuleType::Lidar,
-            parent_id:String::new()
+            lool_up_id: manuel_id.clone(),
+            module_type: ModuleType::Lidar,
+            parent_id: String::new(),
         });
 
         new_lidar.curr_point = new_lidar.max_point.clone();
@@ -91,8 +89,12 @@ impl<'d> Lidar<'d> {
         new_lidar.move_to_point();
         new_lidar.curr_point = Point { x: 0, y: 0 };
         new_lidar.move_to_point();
+        emit::event(ModuleEvent::Lidar(LidarEvent::Roi {
+            id: new_lidar.id().clone(),
+            min: new_lidar.min_point.clone(),
+            max: new_lidar.max_point.clone(),
+        }));
         SysLog::info("-----Lidar start----".to_string(), None);
-        
 
         Ok(new_lidar)
     }
@@ -103,7 +105,6 @@ impl<'d> Lidar<'d> {
                 x: self.curr_point.x + (self.step as i32 * self.x_d),
                 y: self.curr_point.y,
             };
-        
 
             if (self.curr_point.x) == self.limit_point.x {
                 if self.limit_point.x == self.max_point.x {
@@ -112,20 +113,23 @@ impl<'d> Lidar<'d> {
                     self.limit_point.x = self.max_point.x;
                 }
                 self.x_d *= -1;
-                if self.curr_point.y == -self.limit_point.y {
+                if self.curr_point.y == self.limit_point.y {
                     self.curr_scan_mode = ScanState::Idol;
-                    emit::event(ModuleEvent::Lidar(LidarEvent::ScanState { id: self.id().clone(), state: self.curr_scan_mode.clone() }));
+                    emit::event(ModuleEvent::Lidar(LidarEvent::ScanState {
+                        id: self.id().clone(),
+                        state: self.curr_scan_mode.clone(),
+                    }));
                     if let Some(start) = self.scan_time {
                         // log::debug!("write_all took {:?}", start.elapsed());
-                        emit::event(ModuleEvent::SysLog(SysLogEvent{
-                            text:format!("Full Scan time {:?}", start.elapsed()),
-                            raw_err :None,
-                            priority :LogPriority::High
+                        emit::event(ModuleEvent::SysLog(SysLogEvent {
+                            text: format!("Full Scan time {:?}", start.elapsed()),
+                            raw_err: None,
+                            priority: LogPriority::High,
                         }));
                     }
                     return;
                 }
-                next_point.y -= 1;
+                next_point.y += 1;
             }
             self.curr_point = next_point;
 
@@ -143,13 +147,11 @@ impl<'d> Lidar<'d> {
             x: self.servo_x.pivot_angle(),
             y: self.servo_y.pivot_angle(),
         };
-        
     }
 
     pub fn get_id(&self) -> String {
         self.id().clone()
     }
-
 }
 
 impl<'d> Module for Lidar<'d> {
@@ -181,7 +183,7 @@ impl<'d> Module for Lidar<'d> {
                     } else if self.servo_y.id() == id {
                         let _ = self.servo_y.set_angle(*step);
                         self.curr_point.y = self.servo_y.pivot_angle();
-                    } 
+                    }
                 }
                 LidarCommandPayload::Roi { min, max } => {
                     SysLog::info(
@@ -190,37 +192,45 @@ impl<'d> Module for Lidar<'d> {
                     );
                     self.min_point = min.clone();
                     self.max_point = max.clone();
-                    
+                    emit::event(ModuleEvent::Lidar(LidarEvent::Roi {
+                        id: self.id().clone(),
+                        min: self.min_point.clone(),
+                        max: self.max_point.clone(),
+                    }));
                 }
                 LidarCommandPayload::SetStep { step } => {
                     SysLog::info(format!("LiDAR received SetStep: step={}", step), None);
                     self.scan_time = None;
                     self.step = *step;
-                    
                 }
                 LidarCommandPayload::StartScan => {
                     self.scan_time = Some(std::time::Instant::now());
                     SysLog::info("LiDAR received StartScan".to_string(), None);
-                    
+
                     self.curr_point = self.min_point.clone();
                     self.limit_point = self.max_point.clone();
-                    self.x_d = 1;
+                    self.x_d = -1;
                     self.move_to_point();
                     self.curr_scan_mode = ScanState::Scanning;
-                     emit::event(ModuleEvent::Lidar(LidarEvent::ScanState { id: self.id().clone(), state: self.curr_scan_mode.clone() }));
-                    
+                    emit::event(ModuleEvent::Lidar(LidarEvent::ScanState {
+                        id: self.id().clone(),
+                        state: self.curr_scan_mode.clone(),
+                    }));
                 }
 
                 LidarCommandPayload::StopScan => {
-                    // SysLog::info("LiDAR received StopScan".to_string(), None);
+                    SysLog::info("LiDAR received StopScan".to_string(), None);
                     self.curr_scan_mode = ScanState::StopScan;
-                    emit::event(ModuleEvent::Lidar(LidarEvent::ScanState { id: self.id().clone(), state: self.curr_scan_mode.clone() }));
+                    emit::event(ModuleEvent::Lidar(LidarEvent::ScanState {
+                        id: self.id().clone(),
+                        state: self.curr_scan_mode.clone(),
+                    }));
                 }
                 LidarCommandPayload::Test => {
                     SysLog::info("LiDAR received Test".to_string(), None);
                 }
                 LidarCommandPayload::MovePos { p } => {
-                    // SysLog::info(format!("LiDAR received MovePos: point={:?}", p), None);
+                    SysLog::info(format!("LiDAR received MovePos: point={:?}", p), None);
                     self.curr_point = p.clone();
                     self.move_to_point();
                 }
@@ -237,6 +247,4 @@ impl<'d> Module for Lidar<'d> {
         }
         Ok(())
     }
-
-   
 }

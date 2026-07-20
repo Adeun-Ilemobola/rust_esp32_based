@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::protocol::command::RangefinderDistanceMode;
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(tag = "module_type", content = "event")]
@@ -8,6 +9,7 @@ pub enum ModuleEvent {
     Lidar(LidarEvent),
     Button(ButtonEvent),
     SysLog(SysLogEvent),
+    Rangefinder(RangefinderEvent)
 }
 
 // ------ SysLogEvent -----
@@ -80,4 +82,36 @@ pub enum LidarEvent {
 #[serde(tag = "event_type")]
 pub enum ButtonEvent {
     Ckick { id: String },
+}
+
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(tag = "event_type")]
+pub enum RangefinderEvent {
+    Range {
+        id: String,
+        millimeters: u16,
+    },
+
+    RangingState {
+        id: String,
+        is_ranging: bool,
+    },
+
+    TimingBudget {
+        id: String,
+        milliseconds: u16,
+    },
+
+   
+
+    DistanceMode {
+        id: String,
+        mode: RangefinderDistanceMode,
+    },
+
+    InvalidMeasurement {
+        id: String,
+        status: String,
+    },
 }

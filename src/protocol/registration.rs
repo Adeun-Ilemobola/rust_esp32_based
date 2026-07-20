@@ -10,6 +10,7 @@ pub enum ModuleType {
     LedCluster,
     Button,
     Lidar,
+    Rangefinder,
      SysLog
 }
 #[derive(Debug, Serialize ,Clone )]
