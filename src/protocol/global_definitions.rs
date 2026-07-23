@@ -19,7 +19,7 @@ pub enum ModuleType {
 pub struct RangPoint {
     pub x: i32,
     pub y: i32,
-    pub distant: u32,
+    pub distant: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

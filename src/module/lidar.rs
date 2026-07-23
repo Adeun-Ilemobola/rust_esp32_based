@@ -3,7 +3,7 @@ use crate::core::modulecore::emit;
 use crate::module::range_finder::Rangefinder;
 use crate::module::servomodule::ServoModule;
 use crate::protocol::command::{LidarCommandPayload, ModuleCommand};
-use crate::protocol::global_definitions::{ModuleType, Point, ServoCapability};
+use crate::protocol::global_definitions::{ModuleType, Point, RangPoint, ServoCapability};
 use crate::protocol::module_event::{
     LidarEvent, LogPriority, ModuleEvent, ScanState, SysLogEvent,
 };
@@ -35,6 +35,7 @@ pub struct Lidar<'d> {
     curr_scan_mode: ScanState,
     x_d: i32,
     scan_time: Option<std::time::Instant>,
+    point_map:Vec<RangPoint>
 }
 
 impl<'d> Lidar<'d> {
@@ -79,7 +80,7 @@ impl<'d> Lidar<'d> {
             Ok(_) => {}
             Err(err) => {
                 emit::event(ModuleEvent::SysLog(SysLogEvent {
-                    text: format!("start_ranging in lidar : {:?}",err),
+                    text: format!("start_ranging in lidar has fail : {:?}",err),
                     raw_err: None,
                     priority: LogPriority::High,
                 }));
@@ -99,6 +100,7 @@ impl<'d> Lidar<'d> {
             limit_point: Point { x: -90, y: 90 },
             scan_time: None,
             rangefinder,
+            point_map: vec![]
         };
         emit::registration(Registration {
             id: new_lidar.id().clone(),
@@ -130,7 +132,7 @@ impl<'d> Lidar<'d> {
                 x: self.curr_point.x + (self.step as i32 * self.x_d),
                 y: self.curr_point.y,
             };
-
+           
             if (self.curr_point.x) == self.limit_point.x {
                 if self.limit_point.x == self.max_point.x {
                     self.limit_point.x = self.min_point.x
@@ -154,8 +156,14 @@ impl<'d> Lidar<'d> {
                     }
                     return;
                 }
-                next_point.y += 1;
+                next_point.y -= 1;
             }
+
+             self.point_map.push(RangPoint{
+                x:next_point.x.clone(),
+                y:next_point.y.clone(),
+                distant:self.rangefinder.range_mm.clone()
+             });
             self.curr_point = next_point;
 
             self.move_to_point();
@@ -222,6 +230,8 @@ impl<'d> Module for Lidar<'d> {
                         min: self.min_point.clone(),
                         max: self.max_point.clone(),
                     }));
+                    
+
                 }
                 LidarCommandPayload::SetStep { step } => {
                     SysLog::info(format!("LiDAR received SetStep: step={}", step), None);
@@ -232,8 +242,8 @@ impl<'d> Module for Lidar<'d> {
                     self.scan_time = Some(std::time::Instant::now());
                     SysLog::info("LiDAR received StartScan".to_string(), None);
 
-                    self.curr_point = self.min_point.clone();
-                    self.limit_point = self.max_point.clone();
+                    self.curr_point = self.max_point.clone();
+                    self.limit_point = self.min_point.clone();
                     self.x_d = -1;
                     self.move_to_point();
                     self.curr_scan_mode = ScanState::Scanning;
